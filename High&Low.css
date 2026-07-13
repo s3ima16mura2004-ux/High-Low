@@ -1,0 +1,271 @@
+/* 全体のリセットと背景設定 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* ゲーム全体のコンテナ */
+.game-container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    width: 90%;
+    max-width: 450px;
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+.score-board {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+    color: #00ffcc;
+    font-weight: bold;
+}
+
+/* カード置き場 */
+.card-area {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* トランプカードの見た目 */
+.card {
+    width: 100px;
+    height: 150px;
+    background: #ffffff;
+    color: #1e1e2f;
+    border-radius: 12px;
+    font-size: 3rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+}
+
+.message {
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+    min-height: 50px; /* 文字が変わってもガタつかないように高さを確保 */
+}
+
+/* ボタンの共通スタイル */
+.btn-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 8px;
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    white-space: nowrap;
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+/* Highボタン：緑系 */
+.btn-high {
+    background: #00b4d8;
+    color: white;
+}
+.btn-high:hover {
+    background: #0096c7;
+    box-shadow: 0 0 15px rgba(0, 180, 216, 0.5);
+}
+
+/* JUSTボタン：紫系 */
+.btn-just {
+    background: #8a2be2;
+    color: white;
+}
+.btn-just:hover {
+    background: #9932cc;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
+}
+
+/* Lowボタン：赤・オレンジ系 */
+.btn-low {
+    background: #f77f00;
+    color: white;
+}
+.btn-low:hover {
+    background: #fcbf49;
+    box-shadow: 0 0 15px rgba(247, 127, 0, 0.5);
+}
+
+/* リセットボタン */
+.btn-reset {
+    background: #fff;
+    color: #1e1e2f;
+    margin-top: 20px;
+    width: 100%;
+}
+/* カード内の画像用スタイル */
+.card img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* 画像の縦横比を崩さずにぴったり収める */
+    border-radius: 12px; /* カードの丸みに合わせる */
+}
+/* コイン表示の色 */
+#coins {
+    color: #ffd700; /* ゴールド */
+}
+
+/* ベットエリアのスタイル */
+.bet-area {
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 数字入力ボックスの見た目 */
+#bet-input {
+    width: 70px;
+    padding: 6px;
+    border: none;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #1e1e2f;
+    font-weight: bold;
+    text-align: center;
+    font-size: 1rem;
+}
+/* 最高記録の表示スタイル */
+#max-streak, #max-coins {
+    font-size: 0.95rem;
+    opacity: 0.8; /* 少し不透明にして現在のスコアを引き立てる */
+}
+#max-streak {
+    color: #00ffcc;
+}
+#max-coins {
+    color: #ffd700;
+}
+/* --- 3Dカードフリップの演出スタイル --- */
+
+/* カード全体の枠（立体的な空間を作る） */
+.card {
+    width: 100px;
+    height: 150px;
+    background: transparent; /* 背景を透明にして内側に任せる */
+    box-shadow: none;
+    perspective: 1000px; /* 奥行き感（3D効果）を出す */
+}
+
+/* カードの内側（これが実際にクルッと回転する） */
+.card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d; /* 3D空間を維持する */
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); /* スムーズに回転 */
+}
+
+/* JavaScriptでこのクラスをつけると、カードが180度ひっくり返る */
+.card-inner.is-flipped {
+    transform: rotateY(180deg);
+}
+
+/* カードの表面・裏面の共通設定 */
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden; /* 裏返ったときに背面の要素を隠す */
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3rem;
+    font-weight: bold;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+
+/* カードの裏面（伏せられているとき：赤いデザイン） */
+.card-back {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: #ffffff;
+}
+
+/* カードの表面（トランプ画像側：あらかじめ180度裏返しておく） */
+.card-front {
+    background: #ffffff;
+    color: #1e1e2f;
+    transform: rotateY(180deg); 
+}
+/* お助けスキルエリアのスタイル */
+.skill-area {
+    margin-bottom: 20px;
+}
+
+/* パスボタンの見た目 */
+.btn-skill {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    background: #4cc9f0;
+    color: #1e1e2f;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-skill:hover:not(:disabled) {
+    background: #4cc9f0;
+    box-shadow: 0 0 15px rgba(76, 201, 240, 0.6);
+}
+
+/* ボタンが押されたとき */
+.btn-skill:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* 使い切って無効化されたときのスタイル */
+.btn-skill:disabled {
+    background: #555566;
+    color: #888899;
+    cursor: not-allowed;
+    box-shadow: none;
+}

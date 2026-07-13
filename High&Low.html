@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High & Low Game</title>
+    <link rel="stylesheet" href="High&Low.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>HIGH & LOW</h1>
+        
+        <div class="score-board">
+            <p>連勝数: <span id="streak">0</span> (最高: <span id="max-streak">0</span>)</p>
+            <p>所持コイン: <span id="coins">100</span> 枚 (最高: <span id="max-coins">100</span>)</p>
+        </div>
+
+        <div class="bet-area">
+            <label for="bet-input">ベットする枚数: </label>
+            <input type="number" id="bet-input" value="10" min="1">
+        </div>
+
+        <div class="card-area">
+            <div class="card" id="current-card">
+                <img id="current-card-img" src="" alt="現在のカード">
+            </div>
+            <div class="card" id="next-card">
+                <div class="card-inner" id="next-card-inner">
+                    <div class="card-face card-back">?</div>
+                    <div class="card-face card-front">
+                        <img id="next-card-img" class="card-img" src="" alt="次のカード">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p class="message" id="message">次のカードは、今より高い？低い？</p>
+
+        <div class="skill-area">
+            <button class="btn-skill" id="btn-pass">🌀 パスする (残り <span id="pass-count">1</span> 回)</button>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-high" id="btn-high">HIGH (高い)</button>
+            <button class="btn btn-just" id="btn-just">JUST (同じ)</button>
+            <button class="btn btn-low" id="btn-low">LOW (低い)</button>
+        </div>
+        
+        <button class="btn btn-reset" id="btn-reset" style="display: none;">もう一度遊ぶ</button>
+    </div>
+
+    <script src="High&Low.js"></script>
+</body>
+</html>

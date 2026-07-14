@@ -76,8 +76,18 @@
             </div>
 
             <button class="btn btn-reset" id="btn-reset" style="display: none;">もう一度遊ぶ</button>
-        </div>
 
+            <div id="mission-board" style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; margin-top: 25px; text-align: left; border: 1px solid rgba(255, 255, 255, 0.1);">
+                <h3 style="font-size: 1.1rem; color: #ffd700; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📅 本日のデイリーミッション (5つ)</span>
+                    <span id="mission-date" style="font-size: 0.8rem; color: #888899;">----/--/--</span>
+                </h3>
+                <p style="font-size: 0.75rem; color: #aaa; margin-bottom: 12px;">※毎日日付が変わると新しいミッションに切り替わります</p>
+                <ul id="mission-list" style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- ここにJavaScriptで動的に5つのミッションが生成されます -->
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script src="High&Low.js"></script>

@@ -1,4 +1,5 @@
 // --- ゲームの状態を管理する変数 ---
+let currentUser = ""; // 🔑 現在ログイン中のユーザー名
 let currentCard = { suit: '', value: 0 };
 let nextCard = { suit: '', value: 0 };
 let streak = 0; 
@@ -12,8 +13,8 @@ let hasShield = false;
 let isDoubleUpMode = false;
 let pooledCoins = 0; 
 
-let maxStreak = localStorage.getItem('hl_max_streak') ? parseInt(localStorage.getItem('hl_max_streak'), 10) : 0;
-let maxCoins = localStorage.getItem('hl_max_coins') ? parseInt(localStorage.getItem('hl_max_coins'), 10) : 100;
+let maxStreak = 0;
+let maxCoins = 100;
 
 const suits = ['clover', 'dia', 'heart', 'spades'];
 
@@ -44,6 +45,139 @@ const poolCoinsEl = document.getElementById('pool-coins');
 const btnCollect = document.getElementById('btn-collect');
 const btnDoubleContinue = document.getElementById('btn-double-continue');
 
+// 🔑 ログイン・ユーザー管理用の要素（追加）
+const loginArea = document.getElementById('login-area');
+const gamePlayArea = document.getElementById('game-play-area');
+const userStatusArea = document.getElementById('user-status-area');
+const currentUserDisplay = document.getElementById('current-user-display');
+const usernameInput = document.getElementById('username-input');
+const btnLogin = document.getElementById('btn-login');
+const btnLogout = document.getElementById('btn-logout');
+const userSelectContainer = document.getElementById('user-select-container');
+const userSelect = document.getElementById('user-select');
+
+// --- 🔑 ユーザーデータの保存・読み込みロジック (LocalStorage) ---
+
+// 保存されている全ユーザー名の一覧を取得
+function getUserList() {
+    const list = localStorage.getItem('hl_user_list');
+    return list ? JSON.parse(list) : [];
+}
+
+// ユーザー一覧のドロップダウンメニューを更新
+function updateUserSelectDropdown() {
+    const users = getUserList();
+    if (users.length > 0) {
+        userSelect.innerHTML = '<option value="">-- 選択してください --</option>';
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user;
+            option.textContent = user;
+            userSelect.appendChild(option);
+        });
+        userSelectContainer.style.display = 'block';
+    } else {
+        userSelectContainer.style.display = 'none';
+    }
+}
+
+// 特定のユーザーのデータを保存
+function saveUserData() {
+    if (!currentUser) return;
+    
+    // 現在のゲーム状態をオブジェクトにまとめる
+    const userData = {
+        coins: coins,
+        streak: streak,
+        maxCoins: maxCoins,
+        maxStreak: maxStreak,
+        passCount: passCount,
+        hasShield: hasShield
+    };
+    
+    localStorage.setItem(`hl_user_${currentUser}`, JSON.stringify(userData));
+
+    // ユーザー一覧リストにも追加（未登録の場合のみ）
+    const users = getUserList();
+    if (!users.includes(currentUser)) {
+        users.push(currentUser);
+        localStorage.setItem('hl_user_list', JSON.stringify(users));
+    }
+}
+
+// 特定のユーザーのデータを読み込み
+function loadUserData(username) {
+    currentUser = username;
+    const dataStr = localStorage.getItem(`hl_user_${username}`);
+    
+    if (dataStr) {
+        // データが存在すれば復元
+        const data = JSON.parse(dataStr);
+        coins = data.coins ?? 100;
+        streak = data.streak ?? 0;
+        maxCoins = data.maxCoins ?? 100;
+        maxStreak = data.maxStreak ?? 0;
+        passCount = data.passCount ?? 1;
+        hasShield = data.hasShield ?? false;
+    } else {
+        // 新規ユーザーの場合は初期値
+        coins = 100;
+        streak = 0;
+        maxCoins = 100;
+        maxStreak = 0;
+        passCount = 1;
+        hasShield = false;
+    }
+
+    // 表示の更新
+    currentUserDisplay.textContent = currentUser;
+    streakEl.textContent = streak;
+    maxStreakEl.textContent = maxStreak;
+    coinsEl.textContent = coins;
+    maxCoinsEl.textContent = maxCoins;
+    passCountEl.textContent = passCount;
+    updateShieldUI();
+
+    // 画面切り替え
+    loginArea.style.display = 'none';
+    userStatusArea.style.display = 'flex';
+    gamePlayArea.style.display = 'block';
+
+    // ゲーム盤面の初期化
+    initGame(true); // ログイン直後はコインリセット等を走らせないためのフラグ
+}
+
+// ログイン処理
+function handleLogin() {
+    let name = usernameInput.value.trim();
+    
+    // セレクトボックスから選ばれている場合はそちらを優先
+    if (userSelect.value) {
+        name = userSelect.value;
+    }
+
+    if (!name) {
+        alert("ユーザー名を入力するか、リストから選択してください！");
+        return;
+    }
+
+    loadUserData(name);
+    usernameInput.value = "";
+}
+
+// ログアウト処理
+function handleLogout() {
+    saveUserData(); // 現在の状態をセーブ
+    currentUser = "";
+    
+    // 画面切り替え
+    loginArea.style.display = 'block';
+    userStatusArea.style.display = 'none';
+    gamePlayArea.style.display = 'none';
+    
+    updateUserSelectDropdown();
+}
+
 function getRandomCard() {
     const randomSuit = suits[Math.floor(Math.random() * suits.length)];
     const randomValue = Math.floor(Math.random() * 13) + 1;
@@ -73,6 +207,9 @@ function updateHighScore() {
     }
     maxStreakEl.textContent = maxStreak;
     maxCoinsEl.textContent = maxCoins;
+
+    // 記録が更新される可能性があるので都度セーブ
+    saveUserData();
 }
 
 // 🛡️ シールドの表示を更新する関数（追加）
@@ -87,8 +224,10 @@ function updateShieldUI() {
 }
 
 // --- ゲーム初期化 ---
-function initGame() {
-    if (coins <= 0) {
+function initGame(isFirstLogin = false) {
+    if (!currentUser) return;
+
+    if (coins <= 0 && !isFirstLogin) {
         coins = 100;
         streak = 0;
         streakEl.textContent = streak;
@@ -139,6 +278,7 @@ function usePass() {
 
     messageEl.textContent = 'カードを引き直しました！さあ、どっち？';
     messageEl.style.color = '#4cc9f0';
+    saveUserData(); // パス回数の減少をセーブ
 }
 
 // --- 勝敗判定 ---
@@ -161,6 +301,7 @@ function checkChoice(playerChoice) {
         // 通常ベット時は先に手持ちから引いてプールしておく
         coins -= betAmount;
         coinsEl.textContent = coins;
+        saveUserData(); // ベットした時点の状態をセーブ
     }
 
     // 入力やボタンの無効化
@@ -365,5 +506,15 @@ btnPass.addEventListener('click', () => usePass());
 btnCollect.addEventListener('click', collectCoins);
 btnDoubleContinue.addEventListener('click', continueDoubleUp);
 
+// 🔑 ログイン・ログアウト用イベントリスナー（追加）
+btnLogin.addEventListener('click', handleLogin);
+btnLogout.addEventListener('click', handleLogout);
+usernameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleLogin();
+});
+
+// 🔑 アプリ起動時の初期化処理（ログイン待ち状態にする）
+updateUserSelectDropdown();
+
 // ゲームスタート
-initGame();
+//initGame();

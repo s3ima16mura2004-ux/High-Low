@@ -9,85 +9,153 @@
 <body>
     <div class="game-container">
         <h1>HIGH & LOW</h1>
-
-        <div id="login-area" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-            <h2 style="font-size: 1.5rem; margin-bottom: 15px; color: #ffd700;">👤 ユーザーログイン</h2>
-            <div style="margin-bottom: 15px;">
-                <input type="text" id="username-input" placeholder="ユーザー名を入力" style="padding: 8px 12px; border-radius: 5px; border: none; width: 70%; font-size: 1rem;">
-                <button class="btn btn-just" id="btn-login" style="padding: 8px 15px; margin-left: 5px;">ログイン</button>
+        
+        <div id="login-area" style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="margin-bottom: 15px; color: #ffd700; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                👤 ユーザーログイン
+            </h3>
+            
+            <div id="user-select-container" style="margin-bottom: 15px; display: none;">
+                <label for="user-select" style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">登録済みのユーザーから選ぶ:</label>
+                <select id="user-select" style="width: 100%; padding: 8px; border-radius: 6px; background: #222; color: #fff; border: 1px solid #444; font-size: 0.9rem;"></select>
             </div>
-            <div id="user-select-container" style="display: none; font-size: 0.9rem;">
-                <label for="user-select">登録済みユーザーから選ぶ: </label>
-                <select id="user-select" style="padding: 5px; border-radius: 5px; margin-left: 5px; background: #2a2a40; color: white; border: 1px solid #4cc9f0;"></select>
-            </div>
-        </div>
 
-        <div id="user-status-area" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
-            <span>プレイヤー: <strong id="current-user-display" style="color: #ffb703;">---</strong></span>
-            <button id="btn-logout" style="background: transparent; border: none; color: #ff4b2b; cursor: pointer; text-decoration: underline;">ログアウト</button>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="username-input" placeholder="新しいユーザー名を入力" style="flex: 1; padding: 10px; border-radius: 6px; border: none; font-size: 0.95rem; background: #fff; color: #000;">
+                <button id="btn-login" class="btn btn-just" style="flex: 0 0 80px; padding: 0;">ログイン</button>
+            </div>
         </div>
 
         <div id="game-play-area" style="display: none;">
-            <div class="score-board">
-                <p>連勝数: <span id="streak">0</span> (最高: <span id="max-streak">0</span>)</p>
-                <p>所持コイン: <span id="coins">100</span> 枚 (最高: <span id="max-coins">100</span>)</p>
-                <p>シールド: <span id="shield-status" style="color: #4cc9f0;">🛡️ なし</span></p>
-            </div>
-
-            <div class="bet-area">
-                <label for="bet-input">ベットする枚数: </label>
-                <input type="number" id="bet-input" value="10" min="1">
-            </div>
-
-            <div class="card-area">
-                <div class="card" id="current-card">
-                    <img id="current-card-img" src="" alt="現在のカード">
+            
+            <div id="user-status-area" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px;">
+                <div>
+                    <span id="title-display" style="color: #ffd700; font-weight: bold; margin-right: 5px; font-size: 0.9rem;">[初心者]</span>
+                    <span id="current-user-display" style="font-weight: bold; font-size: 1.1rem; color: #ffffff;">---</span> さん
                 </div>
-                <div class="card" id="next-card">
-                    <div class="card-inner" id="next-card-inner">
-                        <div class="card-face card-back">?</div>
-                        <div class="card-face card-front">
-                            <img id="next-card-img" class="card-img" src="" alt="次のカード">
+                <button id="btn-logout" class="btn" style="flex: none; padding: 4px 10px; font-size: 0.75rem; background: #ff4b2b; color: white;">ログアウト</button>
+            </div>
+
+            <div class="two-column-layout">
+
+                <div class="main-column">
+                    <div class="score-board">
+                        <p>連勝数: <span id="streak">0</span> (最高: <span id="max-streak">0</span>)</p>
+                        <p>所持コイン: <span id="coins">100</span> 枚 (最高: <span id="max-coins">100</span>)</p>
+                    </div>
+
+                    <div style="font-size: 0.9rem; margin-bottom: 10px; font-weight: bold;">
+                        身代わりシールド: <span id="shield-status" style="color: #4cc9f0;">🛡️ なし</span>
+                    </div>
+
+                    <div class="bet-area">
+                        <label for="bet-input">ベットする枚数: </label>
+                        <input type="number" id="bet-input" value="10" min="1">
+                    </div>
+
+                    <div id="double-up-group" style="display: none; background: rgba(255, 215, 0, 0.15); border: 2px solid #ffd700; padding: 12px; border-radius: 12px; margin-bottom: 20px;">
+                        <p style="color: #ffd700; font-weight: bold; font-size: 1.1rem; margin-bottom: 8px;">🎰 ダブルアップ挑戦中！</p>
+                        <p style="font-size: 1rem; margin-bottom: 12px;">現在プールされているコイン: <span id="pool-coins" style="color: #ffd700; font-weight: bold; font-size: 1.2rem;">0</span> 枚</p>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-high" id="btn-collect" style="background: #00ffcc; color: #1e1e2f;">確定（コレクト）する</button>
+                            <button class="btn btn-just" id="btn-double-continue">ダブルアップを続ける</button>
                         </div>
                     </div>
+
+                    <div class="card-area">
+                        <div class="card" id="current-card">
+                            <div class="card-inner">
+                                <div class="card-face card-front">
+                                    <img id="current-card-img" src="" alt="現在のカード">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card" id="next-card">
+                            <div class="card-inner" id="next-card-inner">
+                                <div class="card-face card-back">?</div>
+                                <div class="card-face card-front">
+                                    <img id="next-card-img" class="card-img" src="" alt="次のカード">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="message" id="message">次のカードは、今より高い？低い？</p>
+
+                    <div class="skill-area">
+                        <button class="btn-skill" id="btn-pass">🌀 パスする (残り <span id="pass-count">1</span> 回)</button>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-high" id="btn-high">HIGH (高い)</button>
+                        <button class="btn btn-just" id="btn-just">JUST (同じ)</button>
+                        <button class="btn btn-low" id="btn-low">LOW (低い)</button>
+                    </div>
+                    
+                    <button class="btn btn-reset" id="btn-reset" style="display: none;">もう一度遊ぶ</button>
                 </div>
-            </div>
 
-            <p class="message" id="message">次のカードは、今より高い？低い？</p>
+                <div class="sub-column">
+                    <div id="mission-board" style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <h3 style="font-size: 1.1rem; color: #ffd700; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>📅 本日のデイリーミッション (5つ)</span>
+                            <span id="mission-date" style="font-size: 0.8rem; color: #888899;">----/--/--</span>
+                        </h3>
+                        <p style="font-size: 0.75rem; color: #aaa; margin-bottom: 4px;">※毎日日付が変わると新しいミッションに切り替わります</p>
+                        <p style="font-size: 0.8rem; color: #00ffcc; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
+                            🏆 全達成報酬: <span style="color: #ffd700;">🌟150コインボーナス！</span>
+                        </p>
+                        <ul id="mission-list" style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; display: flex; flex-direction: column; gap: 8px;">
+                        </ul>
+                    </div>
 
-            <div class="skill-area">
-                <button class="btn-skill" id="btn-pass">🌀 パスする (残り <span id="pass-count">1</span> 回)</button>
-            </div>
+                    <div id="gacha-collection-board" style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 20px;">
+                        <h3 style="font-size: 1.1rem; color: #ffb703; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🎡 ラッキーガチャ & コレクション</span>
+                            <button id="btn-gacha" style="background: linear-gradient(135deg, #ff007f, #7928ca); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 0.85rem;">
+                                ガチャを引く (🪙100)
+                            </button>
+                        </h3>
 
-            <div class="btn-group">
-                <button class="btn btn-high" id="btn-high">HIGH (高い)</button>
-                <button class="btn btn-just" id="btn-just">JUST (同じ)</button>
-                <button class="btn btn-low" id="btn-low">LOW (低い)</button>
-            </div>
-            
-            <div id="double-up-group" style="display: none; margin-top: 20px;">
-                <p style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">
-                    ダブルアップ中！ 現在の配当: <span id="pool-coins">0</span> コイン
-                </p>
-                <div class="btn-group">
-                    <button class="btn btn-high" id="btn-collect">コレクト（コインを確定して戻る）</button>
-                    <button class="btn btn-just" id="btn-double-continue">ダブルアップを続ける</button>
-                </div>
-            </div>
+                        <div id="gacha-result" style="display:none; background: rgba(255,215,0,0.1); border: 2px dashed #ffd700; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; color: #ffd700;">
+                            🎉 ガチャから出現: <span id="gacha-result-text">---</span>
+                        </div>
 
-            <button class="btn btn-reset" id="btn-reset" style="display: none;">もう一度遊ぶ</button>
+                        <div style="display: flex; flex-direction: column; gap: 15px; font-size: 0.85rem;">
+                            
+                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                                <h4 style="color: #4cc9f0; margin-bottom: 8px; font-size: 0.9rem;">🏷️ カスタマイズ</h4>
+                                
+                                <label style="display: block; margin-bottom: 8px;">
+                                    <span style="display:block; color: #aaa; margin-bottom: 4px;">着用中の称号:</span>
+                                    <select id="select-title" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px; border-radius: 4px;"></select>
+                                </label>
 
-            <div id="mission-board" style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; margin-top: 25px; text-align: left; border: 1px solid rgba(255, 255, 255, 0.1);">
-                <h3 style="font-size: 1.1rem; color: #ffd700; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
-                    <span>📅 本日のデイリーミッション (5つ)</span>
-                    <span id="mission-date" style="font-size: 0.8rem; color: #888899;">----/--/--</span>
-                </h3>
-                <p style="font-size: 0.75rem; color: #aaa; margin-bottom: 12px;">※毎日日付が変わると新しいミッションに切り替わります</p>
-                <ul id="mission-list" style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; display: flex; flex-direction: column; gap: 8px;">
-                    <!-- ここにJavaScriptで動的に5つのミッションが生成されます -->
-                </ul>
-            </div>
-        </div>
+                                <label style="display: block;">
+                                    <span style="display:block; color: #aaa; margin-bottom: 4px;">背景テーマ（スキン）:</span>
+                                    <select id="select-skin" style="width: 100%; background: #222; color: #fff; border: 1px solid #444; padding: 4px; border-radius: 4px;"></select>
+                                </label>
+                            </div>
+
+                            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <h4 style="color: #4cc9f0; margin-bottom: 8px; font-size: 0.9rem;">🎒 所持お助けアイテム</h4>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span>🌀 パス回数＋1 (残 <b id="count-item-pass" style="color:#00ffcc;">0</b> 個)</span>
+                                        <button id="btn-use-item-pass" style="background:#4cc9f0; color:#000; border:none; padding:4px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold;">使う</button>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span>🛡️ 初期シールド (残 <b id="count-item-shield" style="color:#ff416c;">0</b> 個)</span>
+                                        <button id="btn-use-item-shield" style="background:#ff416c; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold;">使う</button>
+                                    </div>
+                                </div>
+                                <p style="font-size:0.7rem; color: #888; margin-top: 8px; line-height: 1.2;">※ゲームオーバーまたはリセット後に使用できます</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div> </div> </div>
     </div>
 
     <script src="High&Low.js"></script>

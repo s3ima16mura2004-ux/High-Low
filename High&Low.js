@@ -17,12 +17,49 @@ let maxCoins = 100;
 
 const suits = ['clover', 'dia', 'heart', 'spades'];
 
-// 🎯 デイリーミッション用の変数（追加・拡張）
-let dailyMissions = []; // その日に選ばれた5つのミッション
-let missionProgress = {}; // 各ミッションの進行度やクリアフラグ
-let lastMissionDate = ""; // 最後にミッションを生成・読み込んだ日付 (YYYY-MM-DD)
+// 🎯 デイリーミッション用の変数
+let dailyMissions = []; 
+let missionProgress = {}; 
+let lastMissionDate = ""; 
+let isCompleteRewardClaimed = false; 
 
-// 🎯 マスターミッションプール（全8種類）
+// 🎡 ガチャ・コレクション・アイテム用の変数
+let unlockedTitles = ["[初心者]"]; 
+let unlockedSkins = ["default"];   
+let activeTitle = "[初心者]";       
+let activeSkin = "default";         
+let itemPassCount = 0;             
+let itemShieldCount = 0;           
+
+// 🎨 スキン（背景テーマ）の定義
+const SKINS_CONFIG = {
+    default: {
+        name: "デフォルト（紺）",
+        background: "linear-gradient(135deg, #1e1e2f, #2a2a40)",
+        cardAreaBg: "rgba(255, 255, 255, 0.05)",
+        btnBg: "linear-gradient(135deg, #4facfe, #00f2fe)"
+    },
+    forest: {
+        name: "フォレスト（緑）",
+        background: "linear-gradient(135deg, #11998e, #38ef7d)",
+        cardAreaBg: "rgba(0, 0, 0, 0.2)",
+        btnBg: "linear-gradient(135deg, #11998e, #38ef7d)"
+    },
+    wolf: {
+        name: "漆黒のウルフ（黒/赤）",
+        background: "linear-gradient(135deg, #0f0c1b, #240b36)",
+        cardAreaBg: "rgba(255, 0, 0, 0.05)",
+        btnBg: "linear-gradient(135deg, #f12711, #f5af19)"
+    },
+    gorgeous: {
+        name: "ゴージャス（金/紫）",
+        background: "linear-gradient(135deg, #4e085e, #c08c10)",
+        cardAreaBg: "rgba(255, 215, 0, 0.1)",
+        btnBg: "linear-gradient(135deg, #ffd700, #ffa500)"
+    }
+};
+
+// 🎯 マスターミッションプール（全12種類）
 const MISSION_POOL = [
     { id: "m_streak",   text: "🔥 連勝の達人 (5連勝達成)", target: 5, reward: 50,  type: "count" },
     { id: "m_just",     text: "⚡ ジャストブレイカー (JUSTを1回的中)", target: 1, reward: 100, type: "count" },
@@ -31,7 +68,11 @@ const MISSION_POOL = [
     { id: "m_highbet",  text: "💰 ハイローラー (30枚以上ベットして正解)", target: 1, reward: 50,  type: "count" },
     { id: "m_pass",     text: "🌀 パス使い (パスを累計2回使用)", target: 2, reward: 30,  type: "count" },
     { id: "m_bigwin",   text: "💎 大富豪への道 (一度に100枚以上獲得して確定)", target: 1, reward: 60,  type: "count" },
-    { id: "m_spade",    text: "♠️ スペードの挑戦 (♠効果中に予測正解)", target: 1, reward: 50,  type: "count" }
+    { id: "m_spade",    text: "♠️ スペードの挑戦 (♠効果中に予測正解)", target: 1, reward: 50,  type: "count" },
+    { id: "m_heart_get", text: "❤️ 愛の獲得者 (ハート効果でシールドを累計2回獲得)", target: 2, reward: 40, type: "count" },
+    { id: "m_win_streak_3", text: "🥉 かけだし勝負師 (3連勝を累計2回達成)", target: 2, reward: 30, type: "count" },
+    { id: "m_double_collect", text: "🎰 堅実なるコレクター (ダブルアップ成功後に2回コレクト)", target: 2, reward: 50, type: "count" },
+    { id: "m_comeback", text: "❤️‍🩹 不死鳥の如く (シールド消費による身代わりを1回発生)", target: 1, reward: 40, type: "count" }
 ];
 
 // --- HTMLの要素を取得 ---
@@ -74,6 +115,18 @@ const userSelect = document.getElementById('user-select');
 const missionListUI = document.getElementById('mission-list');
 const missionDateUI = document.getElementById('mission-date');
 
+// 🎡 ガチャ・コレクション用の要素
+const titleDisplayEl = document.getElementById('title-display');
+const btnGachaEl = document.getElementById('btn-gacha');
+const gachaResultEl = document.getElementById('gacha-result');
+const gachaResultTextEl = document.getElementById('gacha-result-text');
+const selectTitleEl = document.getElementById('select-title');
+const selectSkinEl = document.getElementById('select-skin');
+const countItemPassEl = document.getElementById('count-item-pass');
+const countItemShieldEl = document.getElementById('count-item-shield');
+const btnUseItemPassEl = document.getElementById('btn-use-item-pass');
+const btnUseItemShieldEl = document.getElementById('btn-use-item-shield');
+
 // --- 🔑 ユーザーデータの保存・読み込みロジック (LocalStorage) ---
 
 function getUserList() {
@@ -108,10 +161,16 @@ function saveUserData() {
         maxStreak: maxStreak,
         passCount: passCount,
         hasShield: hasShield,
-        // 🎯 ミッション情報もセーブ
         dailyMissions: dailyMissions,
         missionProgress: missionProgress,
-        lastMissionDate: lastMissionDate
+        lastMissionDate: lastMissionDate,
+        isCompleteRewardClaimed: isCompleteRewardClaimed,
+        unlockedTitles: unlockedTitles,
+        unlockedSkins: unlockedSkins,
+        activeTitle: activeTitle,
+        activeSkin: activeSkin,
+        itemPassCount: itemPassCount,
+        itemShieldCount: itemShieldCount
     };
     
     localStorage.setItem(`hl_user_${currentUser}`, JSON.stringify(userData));
@@ -127,7 +186,7 @@ function saveUserData() {
 function loadUserData(username) {
     currentUser = username;
     const dataStr = localStorage.getItem(`hl_user_${username}`);
-    const todayStr = getTodayString(); // 今日の日付 (YYYY-MM-DD)
+    const todayStr = getTodayString(); 
 
     if (dataStr) {
         const data = JSON.parse(dataStr);
@@ -139,37 +198,52 @@ function loadUserData(username) {
         hasShield = data.hasShield ?? false;
         
         lastMissionDate = data.lastMissionDate ?? "";
+        isCompleteRewardClaimed = data.isCompleteRewardClaimed ?? false;
 
-        // 🎯 日付が変わっているかチェック
+        unlockedTitles = data.unlockedTitles ?? ["[初心者]"];
+        unlockedSkins = data.unlockedSkins ?? ["default"];
+        activeTitle = data.activeTitle ?? "[初心者]";
+        activeSkin = data.activeSkin ?? "default";
+        itemPassCount = data.itemPassCount ?? 0;
+        itemShieldCount = data.itemShieldCount ?? 0;
+
         if (lastMissionDate !== todayStr) {
-            // 日付が変わっていれば新しくミッションを5つ抽選
             generateDailyMissions(todayStr);
         } else {
-            // 同一日の場合はデータを復元
             dailyMissions = data.dailyMissions ?? [];
             missionProgress = data.missionProgress ?? {};
             if (dailyMissions.length === 0) generateDailyMissions(todayStr);
         }
     } else {
-        // 新規ユーザー
         coins = 100;
         streak = 0;
         maxCoins = 100;
         maxStreak = 0;
         passCount = 1;
         hasShield = false;
+        
+        unlockedTitles = ["[初心者]"];
+        unlockedSkins = ["default"];
+        activeTitle = "[初心者]";
+        activeSkin = "default";
+        itemPassCount = 0;
+        itemShieldCount = 0;
+
         generateDailyMissions(todayStr);
     }
 
-    // 表示の更新
     currentUserDisplay.textContent = currentUser;
+    titleDisplayEl.textContent = activeTitle;
     streakEl.textContent = streak;
     maxStreakEl.textContent = maxStreak;
     coinsEl.textContent = coins;
     maxCoinsEl.textContent = maxCoins;
     passCountEl.textContent = passCount;
+    
     updateShieldUI();
     updateMissionUI();
+    updateCollectionUI();
+    applySkin(activeSkin);
 
     loginArea.style.display = 'none';
     userStatusArea.style.display = 'flex';
@@ -178,7 +252,6 @@ function loadUserData(username) {
     initGame(true); 
 }
 
-// 今日の日付文字列(YYYY-MM-DD)を取得する関数
 function getTodayString() {
     const d = new Date();
     const year = d.getFullYear();
@@ -187,16 +260,14 @@ function getTodayString() {
     return `${year}-${month}-${day}`;
 }
 
-// 🎯 日付ベースでランダムに5つのミッションを決定する関数
 function generateDailyMissions(todayStr) {
     lastMissionDate = todayStr;
+    isCompleteRewardClaimed = false; 
     missionProgress = {};
 
-    // 簡易シャッフルをしてプールから5個選出
     const shuffled = [...MISSION_POOL].sort(() => Math.random() - 0.5);
     dailyMissions = shuffled.slice(0, 5);
 
-    // 進行状況オブジェクトを初期化
     dailyMissions.forEach(m => {
         missionProgress[m.id] = {
             current: 0,
@@ -205,16 +276,19 @@ function generateDailyMissions(todayStr) {
     });
 }
 
-// 🎯 ミッションUIを綺麗に描写する関数
 function updateMissionUI() {
     missionDateUI.textContent = lastMissionDate;
-    missionListUI.innerHTML = ""; // 一旦クリア
+    missionListUI.innerHTML = ""; 
+
+    let totalCleared = 0;
 
     dailyMissions.forEach((m, index) => {
         const prog = missionProgress[m.id];
+        if (!prog) return;
+
         const li = document.createElement('li');
         li.style.display = 'flex';
-        li.style.justify = 'space-between';
+        li.style.justifyContent = 'space-between';
         li.style.alignItems = 'center';
         li.style.padding = '6px 0';
         if (index < 4) li.style.borderBottom = '1px dashed rgba(255,255,255,0.1)';
@@ -229,12 +303,12 @@ function updateMissionUI() {
         if (prog.cleared) {
             spanStatus.textContent = `🎉 クリア! (+${m.reward})`;
             spanStatus.style.color = "#00ffcc";
+            totalCleared++;
         } else {
             spanStatus.textContent = `進行中 (${prog.current}/${m.target})`;
             spanStatus.style.color = "#ffb703";
         }
 
-        // 連勝ミッション、シールド所持ミッションなどはリアルタイムの状況を補足
         if (!prog.cleared) {
             if (m.id === "m_streak") spanStatus.textContent = `進行中 (${Math.min(streak, m.target)}/${m.target})`;
             if (m.id === "m_shield" && hasShield) {
@@ -247,11 +321,21 @@ function updateMissionUI() {
         li.appendChild(spanStatus);
         missionListUI.appendChild(li);
     });
+
+    if (totalCleared === 5 && !isCompleteRewardClaimed) {
+        isCompleteRewardClaimed = true;
+        const rewardAmount = 150;
+        coins += rewardAmount;
+        coinsEl.textContent = coins;
+        saveUserData();
+
+        setTimeout(() => {
+            alert(`🏆🏆🏆 PERFECT CLEAR!!! 🏆🏆🏆\n\n本日のデイリーミッションをすべて達成しました！\nコンプリートボーナスとして【 ${rewardAmount} コイン 】がプレゼントされました！`);
+        }, 1200);
+    }
 }
 
-// 🎯 あらゆるアクション時にミッションのカウントを進める共通関数
 function progressMission(id, amount = 1) {
-    // 今日の5つのミッションに含まれているかチェック
     if (!missionProgress[id] || missionProgress[id].cleared) return;
 
     const m = dailyMissions.find(item => item.id === id);
@@ -259,23 +343,161 @@ function progressMission(id, amount = 1) {
 
     missionProgress[id].current += amount;
 
-    // 目標値に達したらクリア！
     if (missionProgress[id].current >= m.target) {
         missionProgress[id].current = m.target;
         missionProgress[id].cleared = true;
         coins += m.reward;
         coinsEl.textContent = coins;
         
-        // 達成アラート（少し遅らせて出す）
         setTimeout(() => {
-            alert(`🎯 デイリーミッション達成！\n\n【${m.text}】\n報酬: ＋${m.reward} コインを獲得しました！`);
+            alert(`🎯 ミッション達成！\n\n【${m.text}】\n報酬: ＋${m.reward} コインを獲得しました！`);
         }, 600);
     }
     updateMissionUI();
     saveUserData();
 }
 
-// ログイン処理
+// --- ガチャ・コレクションのロジック ---
+
+function drawGacha() {
+    if (coins < 100) {
+        alert("コインが足りません！ガチャを引くには100コイン必要です。");
+        return;
+    }
+
+    coins -= 100;
+    coinsEl.textContent = coins;
+    
+    const rand = Math.random() * 100;
+    let rewardType = "";
+    let rewardObj = null;
+
+    if (rand < 40) {
+        rewardType = "title";
+        const titleRand = Math.random() * 100;
+        if (titleRand < 5) rewardObj = "🎰 神引きの伝説";
+        else if (titleRand < 15) rewardObj = "JUSTを極めし者";
+        else if (titleRand < 35) rewardObj = "シールドマスター";
+        else rewardObj = "一獲千金";
+    } else if (rand < 70) {
+        rewardType = "skin";
+        const skinRand = Math.random() * 100;
+        if (skinRand < 20) rewardObj = "gorgeous"; 
+        else if (skinRand < 50) rewardObj = "wolf";     
+        else rewardObj = "forest";                      
+    } else {
+        rewardType = "item";
+        rewardObj = (Math.random() < 0.5) ? "item_pass" : "item_shield";
+    }
+
+    let displayText = "";
+    let isDuplicate = false;
+
+    if (rewardType === "title") {
+        const titleName = `[${rewardObj}]`;
+        if (unlockedTitles.includes(titleName)) {
+            isDuplicate = true;
+            coins += 50; 
+            displayText = `称号「${titleName}」(重複のため🪙50返還！)`;
+        } else {
+            unlockedTitles.push(titleName);
+            displayText = `新称号：${titleName}！`;
+        }
+    } else if (rewardType === "skin") {
+        const skinId = rewardObj;
+        const skinName = SKINS_CONFIG[skinId].name;
+        if (unlockedSkins.includes(skinId)) {
+            isDuplicate = true;
+            coins += 50; 
+            displayText = `スキン「${skinName}」(重複のため🪙50返還！)`;
+        } else {
+            unlockedSkins.push(skinId);
+            displayText = `新スキン：${skinName}！`;
+        }
+    } else if (rewardType === "item") {
+        if (rewardObj === "item_pass") {
+            itemPassCount++;
+            displayText = `お助けアイテム「🌀パス回数＋1」を獲得！`;
+        } else {
+            itemShieldCount++;
+            displayText = `お助けアイテム「🛡️初期シールド」を獲得！`;
+        }
+    }
+
+    coinsEl.textContent = coins;
+    
+    gachaResultEl.style.display = "block";
+    gachaResultTextEl.textContent = displayText;
+
+    updateCollectionUI();
+    saveUserData();
+}
+
+function updateCollectionUI() {
+    selectTitleEl.innerHTML = "";
+    unlockedTitles.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        if (t === activeTitle) opt.selected = true;
+        selectTitleEl.appendChild(opt);
+    });
+
+    selectSkinEl.innerHTML = "";
+    unlockedSkins.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = SKINS_CONFIG[s].name;
+        if (s === activeSkin) opt.selected = true;
+        selectSkinEl.appendChild(opt);
+    });
+
+    countItemPassEl.textContent = itemPassCount;
+    countItemShieldEl.textContent = itemShieldCount;
+
+    const isPlaying = (streak > 0 || isDoubleUpMode);
+    btnUseItemPassEl.disabled = isPlaying || itemPassCount <= 0;
+    btnUseItemShieldEl.disabled = isPlaying || itemShieldCount <= 0 || hasShield;
+}
+
+function applySkin(skinId) {
+    const cfg = SKINS_CONFIG[skinId] || SKINS_CONFIG.default;
+    document.body.style.background = cfg.background;
+
+    const gameContainer = document.querySelector(".game-container");
+    if (gameContainer) {
+        gameContainer.style.background = "rgba(0, 0, 0, 0.4)";
+        gameContainer.style.borderColor = (skinId === "gorgeous") ? "#ffd700" : "rgba(255, 255, 255, 0.1)";
+    }
+
+    const cardAreas = document.querySelectorAll(".card-area");
+    cardAreas.forEach(area => {
+        area.style.background = cfg.cardAreaBg;
+    });
+}
+
+function useItemPass() {
+    if (itemPassCount <= 0) return;
+    itemPassCount--;
+    passCount++;
+    passCountEl.textContent = passCount;
+    btnPass.disabled = false;
+    alert("🌀 お助けアイテムを使用しました！パス回数が1増えました。");
+    updateCollectionUI();
+    saveUserData();
+}
+
+function useItemShield() {
+    if (itemShieldCount <= 0 || hasShield) return;
+    itemShieldCount--;
+    hasShield = true;
+    updateShieldUI();
+    alert("🛡️ お助けアイテムを使用しました！シールドを装備した状態でスタートします。");
+    updateCollectionUI();
+    saveUserData();
+}
+
+// 🔑 ログイン・ログアウト処理
 function handleLogin() {
     let name = usernameInput.value.trim();
     if (userSelect.value) name = userSelect.value;
@@ -288,7 +510,6 @@ function handleLogin() {
     usernameInput.value = "";
 }
 
-// ログアウト処理
 function handleLogout() {
     saveUserData(); 
     currentUser = "";
@@ -339,7 +560,6 @@ function updateShieldUI() {
 function initGame(isFirstLogin = false) {
     if (!currentUser) return;
 
-    // ログイン時に日付が変わっている可能性のセーフティチェック
     const todayStr = getTodayString();
     if (lastMissionDate !== todayStr) {
         generateDailyMissions(todayStr);
@@ -358,6 +578,7 @@ function initGame(isFirstLogin = false) {
     updateShieldUI();
     updateMissionUI(); 
     updateHighScore();
+    updateCollectionUI(); 
 
     isDoubleUpMode = false;
     pooledCoins = 0;
@@ -398,7 +619,6 @@ function usePass() {
     messageEl.textContent = 'カードを引き直しました！さあ、どっち？';
     messageEl.style.color = '#4cc9f0';
 
-    // 🎯 ミッション進行：パス使い
     progressMission("m_pass", 1);
     saveUserData(); 
 }
@@ -446,13 +666,11 @@ function checkChoice(playerChoice) {
         isCorrect = true;
     }
 
-    // ♦️ ダイヤボーナス
     let diaBonus = 0;
     if (nextCard.suit === 'dia') {
         diaBonus = nextCard.value * 2;
         coins += diaBonus;
         coinsEl.textContent = coins;
-        // 🎯 ミッション進行：ダイヤコレクター
         progressMission("m_dia", 1);
     }
 
@@ -474,6 +692,7 @@ function checkChoice(playerChoice) {
         if (nextCard.suit === 'heart' && !hasShield) {
             hasShield = true;
             shieldEarned = true;
+            progressMission("m_heart_get", 1);
         }
 
         let successMsg = `正解！ ＋${winCoins}コインのチャンス！`;
@@ -489,13 +708,13 @@ function checkChoice(playerChoice) {
         pooledCoins = winCoins; 
         isDoubleUpMode = true;  
 
-        // 🎯 ミッション進行チェック
-        if (streak >= 5) progressMission("m_streak", 5); // 5連勝
-        if (isJustBonus) progressMission("m_just", 1);  // JUST的中
-        if (hadShieldBefore) progressMission("m_shield", 1); // シールド所持中の正解
-        if (isSpadePenaltyActive) progressMission("m_spade", 1); // スペード効果中の正解
-        if (!isDoubleUpMode && betAmount >= 30) progressMission("m_highbet", 1); // ハイローラー（初回ベット時のみ）
-        if (isDoubleUpMode && pooledCoins / payoutMultiplier >= 30) progressMission("m_highbet", 1); // ダブルアップ時
+        if (streak >= 5) progressMission("m_streak", 5); 
+        if (streak >= 3 && streak === 3) progressMission("m_win_streak_3", 1);
+        if (isJustBonus) progressMission("m_just", 1);  
+        if (hadShieldBefore) progressMission("m_shield", 1); 
+        if (isSpadePenaltyActive) progressMission("m_spade", 1); 
+        if (!isDoubleUpMode && betAmount >= 30) progressMission("m_highbet", 1); 
+        if (isDoubleUpMode && pooledCoins / payoutMultiplier >= 30) progressMission("m_highbet", 1); 
 
         setTimeout(() => {
             currentCard = nextCard;
@@ -529,6 +748,8 @@ function checkChoice(playerChoice) {
 
             isDoubleUpMode = false;
             pooledCoins = 0;
+
+            progressMission("m_comeback", 1);
             updateMissionUI();
 
             setTimeout(() => {
@@ -587,9 +808,11 @@ function checkChoice(playerChoice) {
 }
 
 function collectCoins() {
-    // 🎯 ミッション進行：大富豪への道（確定時に100枚以上獲得）
     if (pooledCoins >= 100) {
         progressMission("m_bigwin", 1);
+    }
+    if (isDoubleUpMode) {
+        progressMission("m_double_collect", 1);
     }
 
     coins += pooledCoins;
@@ -619,6 +842,19 @@ function continueDoubleUp() {
     if (passCount > 0) btnPass.disabled = false;
 }
 
+// 🔑 称号・スキンの切り替えイベントハンドラ
+selectTitleEl.addEventListener('change', (e) => {
+    activeTitle = e.target.value;
+    titleDisplayEl.textContent = activeTitle;
+    saveUserData();
+});
+
+selectSkinEl.addEventListener('change', (e) => {
+    activeSkin = e.target.value;
+    applySkin(activeSkin);
+    saveUserData();
+});
+
 // --- イベントリスナー ---
 btnHigh.addEventListener('click', () => checkChoice('high'));
 btnJust.addEventListener('click', () => checkChoice('just'));
@@ -634,5 +870,9 @@ btnLogout.addEventListener('click', handleLogout);
 usernameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleLogin();
 });
+
+btnGachaEl.addEventListener('click', drawGacha);
+btnUseItemPassEl.addEventListener('click', useItemPass);
+btnUseItemShieldEl.addEventListener('click', useItemShield);
 
 updateUserSelectDropdown();

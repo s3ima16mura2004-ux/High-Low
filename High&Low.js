@@ -1,22 +1,38 @@
 // --- ゲームの状態を管理する変数 ---
-let currentUser = ""; // 🔑 現在ログイン中のユーザー名
+let currentUser = ""; 
 let currentCard = { suit: '', value: 0 };
 let nextCard = { suit: '', value: 0 };
 let streak = 0; 
 let coins = 100; 
 let passCount = 1;
-
-// 🛡️ シールドの所持状態（追加）
 let hasShield = false;
 
 // 🎰 ダブルアップ用の変数
 let isDoubleUpMode = false;
 let pooledCoins = 0; 
 
+// ユーザーごとの最高記録
 let maxStreak = 0;
 let maxCoins = 100;
 
 const suits = ['clover', 'dia', 'heart', 'spades'];
+
+// 🎯 デイリーミッション用の変数（追加・拡張）
+let dailyMissions = []; // その日に選ばれた5つのミッション
+let missionProgress = {}; // 各ミッションの進行度やクリアフラグ
+let lastMissionDate = ""; // 最後にミッションを生成・読み込んだ日付 (YYYY-MM-DD)
+
+// 🎯 マスターミッションプール（全8種類）
+const MISSION_POOL = [
+    { id: "m_streak",   text: "🔥 連勝の達人 (5連勝達成)", target: 5, reward: 50,  type: "count" },
+    { id: "m_just",     text: "⚡ ジャストブレイカー (JUSTを1回的中)", target: 1, reward: 100, type: "count" },
+    { id: "m_shield",   text: "🛡️ 鉄壁の守護 (シールド所持中に正解)", target: 1, reward: 40,  type: "count" },
+    { id: "m_dia",      text: "♦️ ダイヤコレクター (♦ボーナスを累計2回発生)", target: 2, reward: 40,  type: "count" },
+    { id: "m_highbet",  text: "💰 ハイローラー (30枚以上ベットして正解)", target: 1, reward: 50,  type: "count" },
+    { id: "m_pass",     text: "🌀 パス使い (パスを累計2回使用)", target: 2, reward: 30,  type: "count" },
+    { id: "m_bigwin",   text: "💎 大富豪への道 (一度に100枚以上獲得して確定)", target: 1, reward: 60,  type: "count" },
+    { id: "m_spade",    text: "♠️ スペードの挑戦 (♠効果中に予測正解)", target: 1, reward: 50,  type: "count" }
+];
 
 // --- HTMLの要素を取得 ---
 const currentCardImg = document.getElementById('current-card-img');
@@ -35,8 +51,6 @@ const btnLow = document.getElementById('btn-low');
 const btnReset = document.getElementById('btn-reset');
 const btnPass = document.getElementById('btn-pass'); 
 const passCountEl = document.getElementById('pass-count'); 
-
-// 🛡️ シールド表示要素（追加）
 const shieldStatusEl = document.getElementById('shield-status');
 
 // 🎰 ダブルアップ用の要素
@@ -45,7 +59,7 @@ const poolCoinsEl = document.getElementById('pool-coins');
 const btnCollect = document.getElementById('btn-collect');
 const btnDoubleContinue = document.getElementById('btn-double-continue');
 
-// 🔑 ログイン・ユーザー管理用の要素（追加）
+// 🔑 ログイン・ユーザー管理用の要素
 const loginArea = document.getElementById('login-area');
 const gamePlayArea = document.getElementById('game-play-area');
 const userStatusArea = document.getElementById('user-status-area');
@@ -56,15 +70,17 @@ const btnLogout = document.getElementById('btn-logout');
 const userSelectContainer = document.getElementById('user-select-container');
 const userSelect = document.getElementById('user-select');
 
+// 🎯 ミッション表示用の要素
+const missionListUI = document.getElementById('mission-list');
+const missionDateUI = document.getElementById('mission-date');
+
 // --- 🔑 ユーザーデータの保存・読み込みロジック (LocalStorage) ---
 
-// 保存されている全ユーザー名の一覧を取得
 function getUserList() {
     const list = localStorage.getItem('hl_user_list');
     return list ? JSON.parse(list) : [];
 }
 
-// ユーザー一覧のドロップダウンメニューを更新
 function updateUserSelectDropdown() {
     const users = getUserList();
     if (users.length > 0) {
@@ -81,23 +97,25 @@ function updateUserSelectDropdown() {
     }
 }
 
-// 特定のユーザーのデータを保存
+// セーブ機能
 function saveUserData() {
     if (!currentUser) return;
     
-    // 現在のゲーム状態をオブジェクトにまとめる
     const userData = {
         coins: coins,
         streak: streak,
         maxCoins: maxCoins,
         maxStreak: maxStreak,
         passCount: passCount,
-        hasShield: hasShield
+        hasShield: hasShield,
+        // 🎯 ミッション情報もセーブ
+        dailyMissions: dailyMissions,
+        missionProgress: missionProgress,
+        lastMissionDate: lastMissionDate
     };
     
     localStorage.setItem(`hl_user_${currentUser}`, JSON.stringify(userData));
 
-    // ユーザー一覧リストにも追加（未登録の場合のみ）
     const users = getUserList();
     if (!users.includes(currentUser)) {
         users.push(currentUser);
@@ -105,13 +123,13 @@ function saveUserData() {
     }
 }
 
-// 特定のユーザーのデータを読み込み
+// ロード機能
 function loadUserData(username) {
     currentUser = username;
     const dataStr = localStorage.getItem(`hl_user_${username}`);
-    
+    const todayStr = getTodayString(); // 今日の日付 (YYYY-MM-DD)
+
     if (dataStr) {
-        // データが存在すれば復元
         const data = JSON.parse(dataStr);
         coins = data.coins ?? 100;
         streak = data.streak ?? 0;
@@ -119,14 +137,28 @@ function loadUserData(username) {
         maxStreak = data.maxStreak ?? 0;
         passCount = data.passCount ?? 1;
         hasShield = data.hasShield ?? false;
+        
+        lastMissionDate = data.lastMissionDate ?? "";
+
+        // 🎯 日付が変わっているかチェック
+        if (lastMissionDate !== todayStr) {
+            // 日付が変わっていれば新しくミッションを5つ抽選
+            generateDailyMissions(todayStr);
+        } else {
+            // 同一日の場合はデータを復元
+            dailyMissions = data.dailyMissions ?? [];
+            missionProgress = data.missionProgress ?? {};
+            if (dailyMissions.length === 0) generateDailyMissions(todayStr);
+        }
     } else {
-        // 新規ユーザーの場合は初期値
+        // 新規ユーザー
         coins = 100;
         streak = 0;
         maxCoins = 100;
         maxStreak = 0;
         passCount = 1;
         hasShield = false;
+        generateDailyMissions(todayStr);
     }
 
     // 表示の更新
@@ -137,46 +169,136 @@ function loadUserData(username) {
     maxCoinsEl.textContent = maxCoins;
     passCountEl.textContent = passCount;
     updateShieldUI();
+    updateMissionUI();
 
-    // 画面切り替え
     loginArea.style.display = 'none';
     userStatusArea.style.display = 'flex';
     gamePlayArea.style.display = 'block';
 
-    // ゲーム盤面の初期化
-    initGame(true); // ログイン直後はコインリセット等を走らせないためのフラグ
+    initGame(true); 
+}
+
+// 今日の日付文字列(YYYY-MM-DD)を取得する関数
+function getTodayString() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 🎯 日付ベースでランダムに5つのミッションを決定する関数
+function generateDailyMissions(todayStr) {
+    lastMissionDate = todayStr;
+    missionProgress = {};
+
+    // 簡易シャッフルをしてプールから5個選出
+    const shuffled = [...MISSION_POOL].sort(() => Math.random() - 0.5);
+    dailyMissions = shuffled.slice(0, 5);
+
+    // 進行状況オブジェクトを初期化
+    dailyMissions.forEach(m => {
+        missionProgress[m.id] = {
+            current: 0,
+            cleared: false
+        };
+    });
+}
+
+// 🎯 ミッションUIを綺麗に描写する関数
+function updateMissionUI() {
+    missionDateUI.textContent = lastMissionDate;
+    missionListUI.innerHTML = ""; // 一旦クリア
+
+    dailyMissions.forEach((m, index) => {
+        const prog = missionProgress[m.id];
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.justify = 'space-between';
+        li.style.alignItems = 'center';
+        li.style.padding = '6px 0';
+        if (index < 4) li.style.borderBottom = '1px dashed rgba(255,255,255,0.1)';
+
+        const spanText = document.createElement('span');
+        spanText.textContent = m.text;
+
+        const spanStatus = document.createElement('span');
+        spanStatus.className = "mission-status";
+        spanStatus.style.fontWeight = "bold";
+
+        if (prog.cleared) {
+            spanStatus.textContent = `🎉 クリア! (+${m.reward})`;
+            spanStatus.style.color = "#00ffcc";
+        } else {
+            spanStatus.textContent = `進行中 (${prog.current}/${m.target})`;
+            spanStatus.style.color = "#ffb703";
+        }
+
+        // 連勝ミッション、シールド所持ミッションなどはリアルタイムの状況を補足
+        if (!prog.cleared) {
+            if (m.id === "m_streak") spanStatus.textContent = `進行中 (${Math.min(streak, m.target)}/${m.target})`;
+            if (m.id === "m_shield" && hasShield) {
+                spanStatus.textContent = "🛡️ 準備OK! (正解で達成)";
+                spanStatus.style.color = "#ff416c";
+            }
+        }
+
+        li.appendChild(spanText);
+        li.appendChild(spanStatus);
+        missionListUI.appendChild(li);
+    });
+}
+
+// 🎯 あらゆるアクション時にミッションのカウントを進める共通関数
+function progressMission(id, amount = 1) {
+    // 今日の5つのミッションに含まれているかチェック
+    if (!missionProgress[id] || missionProgress[id].cleared) return;
+
+    const m = dailyMissions.find(item => item.id === id);
+    if (!m) return;
+
+    missionProgress[id].current += amount;
+
+    // 目標値に達したらクリア！
+    if (missionProgress[id].current >= m.target) {
+        missionProgress[id].current = m.target;
+        missionProgress[id].cleared = true;
+        coins += m.reward;
+        coinsEl.textContent = coins;
+        
+        // 達成アラート（少し遅らせて出す）
+        setTimeout(() => {
+            alert(`🎯 デイリーミッション達成！\n\n【${m.text}】\n報酬: ＋${m.reward} コインを獲得しました！`);
+        }, 600);
+    }
+    updateMissionUI();
+    saveUserData();
 }
 
 // ログイン処理
 function handleLogin() {
     let name = usernameInput.value.trim();
-    
-    // セレクトボックスから選ばれている場合はそちらを優先
-    if (userSelect.value) {
-        name = userSelect.value;
-    }
+    if (userSelect.value) name = userSelect.value;
 
     if (!name) {
         alert("ユーザー名を入力するか、リストから選択してください！");
         return;
     }
-
     loadUserData(name);
     usernameInput.value = "";
 }
 
 // ログアウト処理
 function handleLogout() {
-    saveUserData(); // 現在の状態をセーブ
+    saveUserData(); 
     currentUser = "";
-    
-    // 画面切り替え
     loginArea.style.display = 'block';
     userStatusArea.style.display = 'none';
     gamePlayArea.style.display = 'none';
-    
     updateUserSelectDropdown();
 }
+
+// --- 既存のゲームロジック ---
 
 function getRandomCard() {
     const randomSuit = suits[Math.floor(Math.random() * suits.length)];
@@ -197,46 +319,44 @@ function getCardImagePath(card) {
 }
 
 function updateHighScore() {
-    if (streak > maxStreak) {
-        maxStreak = streak;
-        localStorage.setItem('hl_max_streak', maxStreak);
-    }
-    if (coins > maxCoins) {
-        maxCoins = coins;
-        localStorage.setItem('hl_max_coins', maxCoins);
-    }
+    if (streak > maxStreak) maxStreak = streak;
+    if (coins > maxCoins) maxCoins = coins;
     maxStreakEl.textContent = maxStreak;
     maxCoinsEl.textContent = maxCoins;
-
-    // 記録が更新される可能性があるので都度セーブ
     saveUserData();
 }
 
-// 🛡️ シールドの表示を更新する関数（追加）
 function updateShieldUI() {
     if (hasShield) {
         shieldStatusEl.textContent = "🛡️ あり (1回保護)";
-        shieldStatusEl.style.color = "#ff416c"; // ピンク・赤系
+        shieldStatusEl.style.color = "#ff416c";
     } else {
         shieldStatusEl.textContent = "🛡️ なし";
-        shieldStatusEl.style.color = "#4cc9f0"; // 水色
+        shieldStatusEl.style.color = "#4cc9f0";
     }
 }
 
-// --- ゲーム初期化 ---
 function initGame(isFirstLogin = false) {
     if (!currentUser) return;
+
+    // ログイン時に日付が変わっている可能性のセーフティチェック
+    const todayStr = getTodayString();
+    if (lastMissionDate !== todayStr) {
+        generateDailyMissions(todayStr);
+    }
 
     if (coins <= 0 && !isFirstLogin) {
         coins = 100;
         streak = 0;
         streakEl.textContent = streak;
         passCount = 1; 
-        hasShield = false; // 復活時はシールドもリセット
+        hasShield = false; 
     }
+    
     coinsEl.textContent = coins;
     passCountEl.textContent = passCount;
     updateShieldUI();
+    updateMissionUI(); 
     updateHighScore();
 
     isDoubleUpMode = false;
@@ -265,7 +385,6 @@ function initGame(isFirstLogin = false) {
     }
 }
 
-// パス関数
 function usePass() {
     if (passCount <= 0) return;
 
@@ -278,14 +397,16 @@ function usePass() {
 
     messageEl.textContent = 'カードを引き直しました！さあ、どっち？';
     messageEl.style.color = '#4cc9f0';
-    saveUserData(); // パス回数の減少をセーブ
+
+    // 🎯 ミッション進行：パス使い
+    progressMission("m_pass", 1);
+    saveUserData(); 
 }
 
-// --- 勝敗判定 ---
 function checkChoice(playerChoice) {
     let betAmount = 0;
+    const hadShieldBefore = hasShield;
 
-    // ダブルアップ中ならプールされているコインをそのまま賭け金にする
     if (isDoubleUpMode) {
         betAmount = pooledCoins;
     } else {
@@ -298,13 +419,11 @@ function checkChoice(playerChoice) {
             alert("所持コインが足りません！");
             return;
         }
-        // 通常ベット時は先に手持ちから引いてプールしておく
         coins -= betAmount;
         coinsEl.textContent = coins;
-        saveUserData(); // ベットした時点の状態をセーブ
+        saveUserData(); 
     }
 
-    // 入力やボタンの無効化
     btnHigh.disabled = true;
     btnJust.disabled = true;
     btnLow.disabled = true;
@@ -327,23 +446,23 @@ function checkChoice(playerChoice) {
         isCorrect = true;
     }
 
-    // ♦️ ダイヤの即時ボーナス判定（勝敗に関係なく、めくれた瞬間に発動！）
+    // ♦️ ダイヤボーナス
     let diaBonus = 0;
     if (nextCard.suit === 'dia') {
         diaBonus = nextCard.value * 2;
         coins += diaBonus;
         coinsEl.textContent = coins;
+        // 🎯 ミッション進行：ダイヤコレクター
+        progressMission("m_dia", 1);
     }
 
     if (isCorrect) {
         streak++;
         streakEl.textContent = streak;
 
-        // ♠️ スペードの倍率ボーナス（左側のベースカードがスペードなら配当1.5倍）
         const isSpadePenaltyActive = (currentCard.suit === 'spades');
         const payoutMultiplier = isSpadePenaltyActive ? 1.5 : 1.0;
 
-        // 配当の計算
         let winCoins = 0;
         if (isJustBonus) {
             winCoins = Math.round(betAmount * 5 * payoutMultiplier); 
@@ -351,14 +470,12 @@ function checkChoice(playerChoice) {
             winCoins = Math.round(betAmount * 2 * payoutMultiplier); 
         }
 
-        // ❤️ ハートのシールド判定（右側の正解カードがハートならシールド獲得）
         let shieldEarned = false;
         if (nextCard.suit === 'heart' && !hasShield) {
             hasShield = true;
             shieldEarned = true;
         }
 
-        // メッセージの構築
         let successMsg = `正解！ ＋${winCoins}コインのチャンス！`;
         if (isJustBonus) successMsg = `凄すぎる！JUST的中！ ＋${winCoins}コインのチャンス！`;
         if (isSpadePenaltyActive) successMsg += ` (♠効果で配当1.5倍！)`;
@@ -372,29 +489,33 @@ function checkChoice(playerChoice) {
         pooledCoins = winCoins; 
         isDoubleUpMode = true;  
 
+        // 🎯 ミッション進行チェック
+        if (streak >= 5) progressMission("m_streak", 5); // 5連勝
+        if (isJustBonus) progressMission("m_just", 1);  // JUST的中
+        if (hadShieldBefore) progressMission("m_shield", 1); // シールド所持中の正解
+        if (isSpadePenaltyActive) progressMission("m_spade", 1); // スペード効果中の正解
+        if (!isDoubleUpMode && betAmount >= 30) progressMission("m_highbet", 1); // ハイローラー（初回ベット時のみ）
+        if (isDoubleUpMode && pooledCoins / payoutMultiplier >= 30) progressMission("m_highbet", 1); // ダブルアップ時
+
         setTimeout(() => {
             currentCard = nextCard;
             nextCard = getRandomCard();
 
             currentCardImg.src = getCardImagePath(currentCard);
             nextCardInner.classList.remove('is-flipped');
-            updateShieldUI(); // シールド状態を画面に反映
+            updateShieldUI();
             
             messageEl.textContent = 'ダブルアップに挑戦しますか？それともコインを確定（コレクト）しますか？';
             messageEl.style.color = '#ffd700';
 
             poolCoinsEl.textContent = pooledCoins;
             doubleUpGroup.style.display = 'block';
-        }, 2500); // 演出メッセージが少し長いため、余韻を考慮して2.5秒に調整
+            saveUserData();
+        }, 2500);
 
     } else {
-        // ❌ 不正解時の処理
-
-        // 🛡️ シールドによる保護が発動するかチェック
         if (hasShield) {
-            hasShield = false; // シールドを消費
-            
-            // 没収されるはずだったベット額をプレイヤーの手元に戻す
+            hasShield = false; 
             if (!isDoubleUpMode) {
                 coins += betAmount; 
                 coinsEl.textContent = coins;
@@ -404,11 +525,11 @@ function checkChoice(playerChoice) {
             if (diaBonus > 0) shieldSaveMsg += ` [♦ボーナス +${diaBonus}コイン！]`;
             
             messageEl.textContent = shieldSaveMsg;
-            messageEl.style.color = '#ffb703'; // 黄・オレンジ系
+            messageEl.style.color = '#ffb703';
 
-            // シールドで生き残った場合は、ダブルアップを強制終了して次のターンへ進む
             isDoubleUpMode = false;
             pooledCoins = 0;
+            updateMissionUI();
 
             setTimeout(() => {
                 currentCard = nextCard;
@@ -426,14 +547,11 @@ function checkChoice(playerChoice) {
                 btnLow.disabled = false;
                 betInput.disabled = false;
                 if (passCount > 0) btnPass.disabled = false;
+                saveUserData();
             }, 2500);
 
         } else {
-            // シールドがない通常ペナルティ
-
-            // ♠️ スペードの追加ペナルティ（ベースカードがスペードなら損失1.5倍）
             if (currentCard.suit === 'spades' && !isDoubleUpMode) {
-                // すでにbetAmount分はcoinsから引かれているため、追加で0.5倍分を没収する
                 const extraLoss = Math.round(betAmount * 0.5);
                 coins -= extraLoss;
                 coinsEl.textContent = coins;
@@ -451,6 +569,7 @@ function checkChoice(playerChoice) {
             streak = 0;
             streakEl.textContent = streak;
             updateShieldUI();
+            updateMissionUI(); 
             updateHighScore();
 
             if (coins <= 0) {
@@ -462,12 +581,17 @@ function checkChoice(playerChoice) {
             
             messageEl.style.color = '#ff4b2b';
             btnReset.style.display = 'block';
+            saveUserData();
         }
     }
 }
 
-// コインを確定して通常モードに戻る処理（コレクト）
 function collectCoins() {
+    // 🎯 ミッション進行：大富豪への道（確定時に100枚以上獲得）
+    if (pooledCoins >= 100) {
+        progressMission("m_bigwin", 1);
+    }
+
     coins += pooledCoins;
     coinsEl.textContent = coins;
     messageEl.textContent = `${pooledCoins}コインを確定しました！`;
@@ -484,7 +608,6 @@ function collectCoins() {
     }, 1500);
 }
 
-// ダブルアップを継続する処理
 function continueDoubleUp() {
     doubleUpGroup.style.display = 'none';
     messageEl.textContent = `ダブルアップ継続！次のカードは、高い？同じ？低い？`;
@@ -506,15 +629,10 @@ btnPass.addEventListener('click', () => usePass());
 btnCollect.addEventListener('click', collectCoins);
 btnDoubleContinue.addEventListener('click', continueDoubleUp);
 
-// 🔑 ログイン・ログアウト用イベントリスナー（追加）
 btnLogin.addEventListener('click', handleLogin);
 btnLogout.addEventListener('click', handleLogout);
 usernameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleLogin();
 });
 
-// 🔑 アプリ起動時の初期化処理（ログイン待ち状態にする）
 updateUserSelectDropdown();
-
-// ゲームスタート
-//initGame();

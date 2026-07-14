@@ -13,6 +13,7 @@
         <div class="score-board">
             <p>連勝数: <span id="streak">0</span> (最高: <span id="max-streak">0</span>)</p>
             <p>所持コイン: <span id="coins">100</span> 枚 (最高: <span id="max-coins">100</span>)</p>
+            <p>シールド: <span id="shield-status" style="color: #4cc9f0;">🛡️ なし</span></p>
         </div>
 
         <div class="bet-area">
@@ -46,6 +47,16 @@
             <button class="btn btn-low" id="btn-low">LOW (低い)</button>
         </div>
         
+        <div id="double-up-group" style="display: none; margin-top: 20px;">
+            <p style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">
+                ダブルアップ中！ 現在の配当: <span id="pool-coins">0</span> コイン
+            </p>
+            <div class="btn-group">
+                <button class="btn btn-high" id="btn-collect">コレクト（コインを確定して戻る）</button>
+                <button class="btn btn-just" id="btn-double-continue">ダブルアップを続ける</button>
+            </div>
+        </div>
+
         <button class="btn btn-reset" id="btn-reset" style="display: none;">もう一度遊ぶ</button>
     </div>
 

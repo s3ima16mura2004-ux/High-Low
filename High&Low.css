@@ -13,194 +13,101 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    transition: background 0.5s ease;
+    padding: 20px 0;
 }
 
-/* ゲーム全体のコンテナ */
+/* 🎮 ゲーム全体のコンテナ（幅を最大 1000px に広げて2カラムに対応！） */
 .game-container {
     text-align: center;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.4);
     padding: 30px;
     border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     backdrop-filter: blur(10px);
-    width: 90%;
-    max-width: 450px;
+    width: 95%;
+    max-width: 1000px; /* 600px から 1000px に拡張 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: border-color 0.5s ease;
+}
+
+/* 🔲 2カラム用のグリッドレイアウト */
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr; /* 左右比率をほぼ均等に（左を少し広めに） */
+    gap: 25px;
+    margin-top: 15px;
+    text-align: left; /* サブエリアのデフォルトを左寄せに */
+}
+
+/* 左側：ゲームメイン部分 */
+.main-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* 右側：サブコンテンツ（ミッション、ガチャ・コレクション） */
+.sub-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* ボード同士の間隔 */
+}
+
+/* 左カラムの中のゲーム要素は従来通り中央寄せに */
+.main-column .score-board,
+.main-column .bet-area,
+.main-column .message,
+.main-column .btn-group,
+.main-column .skill-area,
+.main-column #double-up-group {
+    text-align: center;
 }
 
 h1 {
     font-size: 2.5rem;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     letter-spacing: 2px;
     text-shadow: 0 0 10px rgba(255,255,255,0.2);
 }
 
 .score-board {
     font-size: 1.2rem;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
     color: #00ffcc;
     font-weight: bold;
+    line-height: 1.6;
 }
 
 /* カード置き場 */
 .card-area {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-/* トランプカードの見た目 */
-.card {
-    width: 100px;
-    height: 150px;
-    background: #ffffff;
-    color: #1e1e2f;
-    border-radius: 12px;
-    font-size: 3rem;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
-}
-
-.message {
-    font-size: 1.1rem;
+    gap: 40px; 
     margin-bottom: 25px;
-    min-height: 50px; /* 文字が変わってもガタつかないように高さを確保 */
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 15px;
+    transition: background 0.5s ease;
 }
 
-/* ボタンの共通スタイル */
-.btn-group {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-.btn {
-    padding: 12px 8px;
-    flex: 1;
-    font-size: 0.9rem;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    white-space: nowrap;
-}
-
-.btn:active {
-    transform: scale(0.95);
-}
-
-/* Highボタン：緑系 */
-.btn-high {
-    background: #00b4d8;
-    color: white;
-}
-.btn-high:hover {
-    background: #0096c7;
-    box-shadow: 0 0 15px rgba(0, 180, 216, 0.5);
-}
-
-/* JUSTボタン：紫系 */
-.btn-just {
-    background: #8a2be2;
-    color: white;
-}
-.btn-just:hover {
-    background: #9932cc;
-    box-shadow: 0 0 15px rgba(138, 43, 226, 0.5);
-}
-
-/* Lowボタン：赤・オレンジ系 */
-.btn-low {
-    background: #f77f00;
-    color: white;
-}
-.btn-low:hover {
-    background: #fcbf49;
-    box-shadow: 0 0 15px rgba(247, 127, 0, 0.5);
-}
-
-/* リセットボタン */
-.btn-reset {
-    background: #fff;
-    color: #1e1e2f;
-    margin-top: 20px;
-    width: 100%;
-}
-/* カード内の画像用スタイル */
-.card img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* 画像の縦横比を崩さずにぴったり収める */
-    border-radius: 12px; /* カードの丸みに合わせる */
-}
-/* コイン表示の色 */
-#coins {
-    color: #ffd700; /* ゴールド */
-}
-
-/* ベットエリアのスタイル */
-.bet-area {
-    margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.08);
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-
-/* 数字入力ボックスの見た目 */
-#bet-input {
-    width: 70px;
-    padding: 6px;
-    border: none;
-    border-radius: 5px;
-    background: #ffffff;
-    color: #1e1e2f;
-    font-weight: bold;
-    text-align: center;
-    font-size: 1rem;
-}
-/* 最高記録の表示スタイル */
-#max-streak, #max-coins {
-    font-size: 0.95rem;
-    opacity: 0.8; /* 少し不透明にして現在のスコアを引き立てる */
-}
-#max-streak {
-    color: #00ffcc;
-}
-#max-coins {
-    color: #ffd700;
-}
-/* --- 3Dカードフリップの演出スタイル --- */
-
-/* カード全体の枠（立体的な空間を作る） */
+/* 🃏 トランプカードの見た目 */
 .card {
-    width: 100px;
-    height: 150px;
-    background: transparent; /* 背景を透明にして内側に任せる */
-    box-shadow: none;
-    perspective: 1000px; /* 奥行き感（3D効果）を出す */
+    width: 130px;  
+    height: 195px; 
+    background: transparent;
+    perspective: 1000px;
 }
 
-/* カードの内側（これが実際にクルッと回転する） */
+/* カードの内側 */
 .card-inner {
     width: 100%;
     height: 100%;
     position: relative;
-    transform-style: preserve-3d; /* 3D空間を維持する */
-    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); /* スムーズに回転 */
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* JavaScriptでこのクラスをつけると、カードが180度ひっくり返る */
 .card-inner.is-flipped {
     transform: rotateY(180deg);
 }
@@ -210,38 +117,156 @@ h1 {
     position: absolute;
     width: 100%;
     height: 100%;
-    backface-visibility: hidden; /* 裏返ったときに背面の要素を隠す */
+    backface-visibility: hidden;
     border-radius: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 3rem;
+    font-size: 4rem;
     font-weight: bold;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
 
-/* カードの裏面（伏せられているとき：赤いデザイン） */
+/* カードの裏面 */
 .card-back {
     background: linear-gradient(135deg, #ff416c, #ff4b2b);
     color: #ffffff;
+    border: 2px solid rgba(255,255,255,0.2);
 }
 
-/* カードの表面（トランプ画像側：あらかじめ180度裏返しておく） */
-.card-front {
+/* カードの表面 */
+#next-card .card-front {
     background: #ffffff;
     color: #1e1e2f;
     transform: rotateY(180deg); 
 }
-/* お助けスキルエリアのスタイル */
-.skill-area {
-    margin-bottom: 20px;
+
+.card img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
 }
 
-/* パスボタンの見た目 */
+.message {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    min-height: 45px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* アクションボタンのスタイル */
+.btn-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 14px 10px;
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    white-space: nowrap;
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-high {
+    background: #00b4d8;
+    color: white;
+}
+.btn-high:hover:not(:disabled) {
+    background: #0096c7;
+    box-shadow: 0 0 10px rgba(0, 180, 216, 0.4);
+}
+
+.btn-just {
+    background: #8a2be2;
+    color: white;
+}
+.btn-just:hover:not(:disabled) {
+    background: #9932cc;
+    box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+}
+
+.btn-low {
+    background: #f77f00;
+    color: white;
+}
+.btn-low:hover:not(:disabled) {
+    background: #fcbf49;
+    box-shadow: 0 0 10px rgba(247, 127, 0, 0.4);
+}
+
+.btn-reset {
+    background: #fff;
+    color: #1e1e2f;
+    margin-top: 15px;
+    width: 100%;
+    font-size: 1rem;
+}
+
+#coins {
+    color: #ffd700;
+}
+
+/* ベットエリア */
+.bet-area {
+    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+#bet-input {
+    width: 80px;
+    padding: 6px;
+    border: none;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #1e1e2f;
+    font-weight: bold;
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+#max-streak {
+    color: #00ffcc;
+}
+#max-coins {
+    color: #ffd700;
+}
+
+/* お助けスキルエリア */
+.skill-area {
+    margin-bottom: 15px;
+}
+
 .btn-skill {
     width: 100%;
-    padding: 10px;
-    font-size: 0.95rem;
+    padding: 12px;
+    font-size: 1rem;
     font-weight: bold;
     background: #4cc9f0;
     color: #1e1e2f;
@@ -253,38 +278,27 @@ h1 {
 }
 
 .btn-skill:hover:not(:disabled) {
-    background: #4cc9f0;
-    box-shadow: 0 0 15px rgba(76, 201, 240, 0.6);
+    box-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
 }
 
-/* ボタンが押されたとき */
 .btn-skill:active:not(:disabled) {
     transform: scale(0.98);
 }
 
-/* 使い切って無効化されたときのスタイル */
 .btn-skill:disabled {
     background: #555566;
     color: #888899;
     cursor: not-allowed;
     box-shadow: none;
 }
-/* ダブルアップ中の確定（コレクト）ボタン：青緑系 */
-#btn-collect {
-    background: #2ec4b6;
-    color: white;
-}
-#btn-collect:hover {
-    background: #0cb0a0;
-    box-shadow: 0 0 15px rgba(46, 196, 182, 0.5);
-}
 
-/* ダブルアップ継続ボタン：ゴールド系 */
-#btn-double-continue {
-    background: #ffb703;
-    color: #1e1e2f;
-}
-#btn-double-continue:hover {
-    background: #fb8500;
-    box-shadow: 0 0 15px rgba(255, 183, 3, 0.5);
+/* 📱 タブレット・スマホ用のレスポンシブ対応（横幅850px以下は1カラムへ戻す） */
+@media (max-width: 850px) {
+    .two-column-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .game-container {
+        max-width: 600px;
+    }
 }

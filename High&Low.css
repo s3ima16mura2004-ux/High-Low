@@ -269,3 +269,22 @@ h1 {
     cursor: not-allowed;
     box-shadow: none;
 }
+/* ダブルアップ中の確定（コレクト）ボタン：青緑系 */
+#btn-collect {
+    background: #2ec4b6;
+    color: white;
+}
+#btn-collect:hover {
+    background: #0cb0a0;
+    box-shadow: 0 0 15px rgba(46, 196, 182, 0.5);
+}
+
+/* ダブルアップ継続ボタン：ゴールド系 */
+#btn-double-continue {
+    background: #ffb703;
+    color: #1e1e2f;
+}
+#btn-double-continue:hover {
+    background: #fb8500;
+    box-shadow: 0 0 15px rgba(255, 183, 3, 0.5);
+}

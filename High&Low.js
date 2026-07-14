@@ -3,14 +3,21 @@ let currentCard = { suit: '', value: 0 };
 let nextCard = { suit: '', value: 0 };
 let streak = 0; 
 let coins = 100; 
-let passCount = 1; // 🌀 パスが使える回数（初期値1回）
+let passCount = 1;
+
+// 🛡️ シールドの所持状態（追加）
+let hasShield = false;
+
+// 🎰 ダブルアップ用の変数
+let isDoubleUpMode = false;
+let pooledCoins = 0; 
 
 let maxStreak = localStorage.getItem('hl_max_streak') ? parseInt(localStorage.getItem('hl_max_streak'), 10) : 0;
 let maxCoins = localStorage.getItem('hl_max_coins') ? parseInt(localStorage.getItem('hl_max_coins'), 10) : 100;
 
 const suits = ['clover', 'dia', 'heart', 'spades'];
 
-// --- HTMLの要素（パーツ）を取得 ---
+// --- HTMLの要素を取得 ---
 const currentCardImg = document.getElementById('current-card-img');
 const nextCardInner = document.getElementById('next-card-inner'); 
 const nextCardImg = document.getElementById('next-card-img');
@@ -25,8 +32,17 @@ const btnHigh = document.getElementById('btn-high');
 const btnJust = document.getElementById('btn-just'); 
 const btnLow = document.getElementById('btn-low');
 const btnReset = document.getElementById('btn-reset');
-const btnPass = document.getElementById('btn-pass'); // 追加
-const passCountEl = document.getElementById('pass-count'); // 追加
+const btnPass = document.getElementById('btn-pass'); 
+const passCountEl = document.getElementById('pass-count'); 
+
+// 🛡️ シールド表示要素（追加）
+const shieldStatusEl = document.getElementById('shield-status');
+
+// 🎰 ダブルアップ用の要素
+const doubleUpGroup = document.getElementById('double-up-group');
+const poolCoinsEl = document.getElementById('pool-coins');
+const btnCollect = document.getElementById('btn-collect');
+const btnDoubleContinue = document.getElementById('btn-double-continue');
 
 function getRandomCard() {
     const randomSuit = suits[Math.floor(Math.random() * suits.length)];
@@ -59,18 +75,34 @@ function updateHighScore() {
     maxCoinsEl.textContent = maxCoins;
 }
 
+// 🛡️ シールドの表示を更新する関数（追加）
+function updateShieldUI() {
+    if (hasShield) {
+        shieldStatusEl.textContent = "🛡️ あり (1回保護)";
+        shieldStatusEl.style.color = "#ff416c"; // ピンク・赤系
+    } else {
+        shieldStatusEl.textContent = "🛡️ なし";
+        shieldStatusEl.style.color = "#4cc9f0"; // 水色
+    }
+}
+
 // --- ゲーム初期化 ---
 function initGame() {
-    // もし破産して復活するタイミングならパス回数もリセット
     if (coins <= 0) {
         coins = 100;
         streak = 0;
         streakEl.textContent = streak;
         passCount = 1; 
+        hasShield = false; // 復活時はシールドもリセット
     }
     coinsEl.textContent = coins;
     passCountEl.textContent = passCount;
+    updateShieldUI();
     updateHighScore();
+
+    isDoubleUpMode = false;
+    pooledCoins = 0;
+    doubleUpGroup.style.display = 'none';
 
     currentCard = getRandomCard();
     nextCard = getRandomCard();
@@ -87,7 +119,6 @@ function initGame() {
     betInput.disabled = false; 
     btnReset.style.display = 'none';
 
-    // パスボタンの残り回数に応じた有効・無効化
     if (passCount > 0) {
         btnPass.disabled = false;
     } else {
@@ -95,16 +126,14 @@ function initGame() {
     }
 }
 
-// 🌀 パス（カードチェンジ）関数
+// パス関数
 function usePass() {
     if (passCount <= 0) return;
 
-    // パス回数を1減らす
     passCount--;
     passCountEl.textContent = passCount;
-    btnPass.disabled = true; // ボタンを無効化
+    btnPass.disabled = true; 
 
-    // 現在のカードを新しいランダムなカードに変更
     currentCard = getRandomCard();
     currentCardImg.src = getCardImagePath(currentCard);
 
@@ -114,23 +143,33 @@ function usePass() {
 
 // --- 勝敗判定 ---
 function checkChoice(playerChoice) {
-    const betAmount = parseInt(betInput.value, 10);
+    let betAmount = 0;
 
-    if (isNaN(betAmount) || betAmount <= 0) {
-        alert("1枚以上ベットしてください！");
-        return;
-    }
-    if (betAmount > coins) {
-        alert("所持コインが足りません！");
-        return;
+    // ダブルアップ中ならプールされているコインをそのまま賭け金にする
+    if (isDoubleUpMode) {
+        betAmount = pooledCoins;
+    } else {
+        betAmount = parseInt(betInput.value, 10);
+        if (isNaN(betAmount) || betAmount <= 0) {
+            alert("1枚以上ベットしてください！");
+            return;
+        }
+        if (betAmount > coins) {
+            alert("所持コインが足りません！");
+            return;
+        }
+        // 通常ベット時は先に手持ちから引いてプールしておく
+        coins -= betAmount;
+        coinsEl.textContent = coins;
     }
 
-    // ゲーム判定中はパスも含めて全ボタンを無効化
+    // 入力やボタンの無効化
     btnHigh.disabled = true;
     btnJust.disabled = true;
     btnLow.disabled = true;
     btnPass.disabled = true;
     betInput.disabled = true;
+    doubleUpGroup.style.display = 'none'; 
 
     nextCardImg.src = getCardImagePath(nextCard);
     nextCardInner.classList.add('is-flipped');
@@ -147,24 +186,50 @@ function checkChoice(playerChoice) {
         isCorrect = true;
     }
 
+    // ♦️ ダイヤの即時ボーナス判定（勝敗に関係なく、めくれた瞬間に発動！）
+    let diaBonus = 0;
+    if (nextCard.suit === 'dia') {
+        diaBonus = nextCard.value * 2;
+        coins += diaBonus;
+        coinsEl.textContent = coins;
+    }
+
     if (isCorrect) {
         streak++;
         streakEl.textContent = streak;
 
+        // ♠️ スペードの倍率ボーナス（左側のベースカードがスペードなら配当1.5倍）
+        const isSpadePenaltyActive = (currentCard.suit === 'spades');
+        const payoutMultiplier = isSpadePenaltyActive ? 1.5 : 1.0;
+
+        // 配当の計算
+        let winCoins = 0;
         if (isJustBonus) {
-            const winCoins = betAmount * 5; 
-            coins += (winCoins - betAmount); 
-            messageEl.textContent = `凄すぎる！JUST的中！ ＋${winCoins}コイン！`;
-            messageEl.style.color = '#8a2be2';
+            winCoins = Math.round(betAmount * 5 * payoutMultiplier); 
         } else {
-            const winCoins = betAmount * 2; 
-            coins += (winCoins - betAmount);
-            messageEl.textContent = `正解！ ＋${winCoins}コイン！`;
-            messageEl.style.color = '#00ffcc';
+            winCoins = Math.round(betAmount * 2 * payoutMultiplier); 
         }
-        
-        coinsEl.textContent = coins;
-        updateHighScore();
+
+        // ❤️ ハートのシールド判定（右側の正解カードがハートならシールド獲得）
+        let shieldEarned = false;
+        if (nextCard.suit === 'heart' && !hasShield) {
+            hasShield = true;
+            shieldEarned = true;
+        }
+
+        // メッセージの構築
+        let successMsg = `正解！ ＋${winCoins}コインのチャンス！`;
+        if (isJustBonus) successMsg = `凄すぎる！JUST的中！ ＋${winCoins}コインのチャンス！`;
+        if (isSpadePenaltyActive) successMsg += ` (♠効果で配当1.5倍！)`;
+        if (diaBonus > 0) successMsg += ` [♦ボーナス +${diaBonus}コイン！]`;
+        if (shieldEarned) successMsg += ` 🛡️ハートのシールドを獲得！`;
+
+        messageEl.textContent = successMsg;
+        messageEl.style.color = '#00ffcc';
+        if (isJustBonus) messageEl.style.color = '#8a2be2';
+
+        pooledCoins = winCoins; 
+        isDoubleUpMode = true;  
 
         setTimeout(() => {
             currentCard = nextCard;
@@ -172,41 +237,122 @@ function checkChoice(playerChoice) {
 
             currentCardImg.src = getCardImagePath(currentCard);
             nextCardInner.classList.remove('is-flipped');
+            updateShieldUI(); // シールド状態を画面に反映
             
-            messageEl.textContent = '次のカードは、高い？同じ？低い？';
-            messageEl.style.color = '#ffffff';
+            messageEl.textContent = 'ダブルアップに挑戦しますか？それともコインを確定（コレクト）しますか？';
+            messageEl.style.color = '#ffd700';
 
-            btnHigh.disabled = false;
-            btnJust.disabled = false;
-            btnLow.disabled = false;
-            betInput.disabled = false;
-
-            // パス回数がまだあれば次のラウンドでまた使えるようにする
-            if (passCount > 0) btnPass.disabled = false;
-        }, 2200);
+            poolCoinsEl.textContent = pooledCoins;
+            doubleUpGroup.style.display = 'block';
+        }, 2500); // 演出メッセージが少し長いため、余韻を考慮して2.5秒に調整
 
     } else {
-        coins -= betAmount;
-        coinsEl.textContent = coins;
-        streak = 0;
-        streakEl.textContent = streak;
-        updateHighScore();
+        // ❌ 不正解時の処理
 
-        if (coins <= 0) {
-            messageEl.textContent = `無一文になりました…ゲームオーバーです！`;
-            btnReset.textContent = "破産から復活する（コイン100枚）";
-        } else {
-            if (nextCard.value === currentCard.value) {
-                messageEl.textContent = `残念！同じ数字（JUST）でした… －${betAmount}コイン`;
-            } else {
-                messageEl.textContent = `残念、不正解！ －${betAmount}コイン`;
+        // 🛡️ シールドによる保護が発動するかチェック
+        if (hasShield) {
+            hasShield = false; // シールドを消費
+            
+            // 没収されるはずだったベット額をプレイヤーの手元に戻す
+            if (!isDoubleUpMode) {
+                coins += betAmount; 
+                coinsEl.textContent = coins;
             }
-            btnReset.textContent = "次のカードへ（リセット）";
+
+            let shieldSaveMsg = `不正解！ですが、🛡️シールドが身代わりになってくれました！`;
+            if (diaBonus > 0) shieldSaveMsg += ` [♦ボーナス +${diaBonus}コイン！]`;
+            
+            messageEl.textContent = shieldSaveMsg;
+            messageEl.style.color = '#ffb703'; // 黄・オレンジ系
+
+            // シールドで生き残った場合は、ダブルアップを強制終了して次のターンへ進む
+            isDoubleUpMode = false;
+            pooledCoins = 0;
+
+            setTimeout(() => {
+                currentCard = nextCard;
+                nextCard = getRandomCard();
+
+                currentCardImg.src = getCardImagePath(currentCard);
+                nextCardInner.classList.remove('is-flipped');
+                updateShieldUI();
+
+                messageEl.textContent = '次のカードは、高い？同じ？低い？';
+                messageEl.style.color = '#ffffff';
+
+                btnHigh.disabled = false;
+                btnJust.disabled = false;
+                btnLow.disabled = false;
+                betInput.disabled = false;
+                if (passCount > 0) btnPass.disabled = false;
+            }, 2500);
+
+        } else {
+            // シールドがない通常ペナルティ
+
+            // ♠️ スペードの追加ペナルティ（ベースカードがスペードなら損失1.5倍）
+            if (currentCard.suit === 'spades' && !isDoubleUpMode) {
+                // すでにbetAmount分はcoinsから引かれているため、追加で0.5倍分を没収する
+                const extraLoss = Math.round(betAmount * 0.5);
+                coins -= extraLoss;
+                coinsEl.textContent = coins;
+                messageEl.textContent = `残念、不正解！ ♠効果でペナルティ1.5倍！ (追加 －${extraLoss}コイン)`;
+            } else {
+                messageEl.textContent = `残念、不正解！ ベットしたコインは没収されました。`;
+            }
+
+            if (diaBonus > 0) {
+                messageEl.textContent += ` [♦ボーナス +${diaBonus}コイン獲得]`;
+            }
+
+            pooledCoins = 0;
+            isDoubleUpMode = false;
+            streak = 0;
+            streakEl.textContent = streak;
+            updateShieldUI();
+            updateHighScore();
+
+            if (coins <= 0) {
+                messageEl.textContent = `無一文になりました…ゲームオーバーです！`;
+                btnReset.textContent = "破産から復活する（コイン100枚）";
+            } else {
+                btnReset.textContent = "次のカードへ（リセット）";
+            }
+            
+            messageEl.style.color = '#ff4b2b';
+            btnReset.style.display = 'block';
         }
-        
-        messageEl.style.color = '#ff4b2b';
-        btnReset.style.display = 'block';
     }
+}
+
+// コインを確定して通常モードに戻る処理（コレクト）
+function collectCoins() {
+    coins += pooledCoins;
+    coinsEl.textContent = coins;
+    messageEl.textContent = `${pooledCoins}コインを確定しました！`;
+    messageEl.style.color = '#00ffcc';
+
+    isDoubleUpMode = false;
+    pooledCoins = 0;
+    doubleUpGroup.style.display = 'none';
+    
+    updateHighScore();
+
+    setTimeout(() => {
+        initGame();
+    }, 1500);
+}
+
+// ダブルアップを継続する処理
+function continueDoubleUp() {
+    doubleUpGroup.style.display = 'none';
+    messageEl.textContent = `ダブルアップ継続！次のカードは、高い？同じ？低い？`;
+    messageEl.style.color = '#ffffff';
+
+    btnHigh.disabled = false;
+    btnJust.disabled = false;
+    btnLow.disabled = false;
+    if (passCount > 0) btnPass.disabled = false;
 }
 
 // --- イベントリスナー ---
@@ -214,7 +360,10 @@ btnHigh.addEventListener('click', () => checkChoice('high'));
 btnJust.addEventListener('click', () => checkChoice('just'));
 btnLow.addEventListener('click', () => checkChoice('low'));
 btnReset.addEventListener('click', () => initGame());
-btnPass.addEventListener('click', () => usePass()); // 追加
+btnPass.addEventListener('click', () => usePass()); 
+
+btnCollect.addEventListener('click', collectCoins);
+btnDoubleContinue.addEventListener('click', continueDoubleUp);
 
 // ゲームスタート
 initGame();

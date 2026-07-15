@@ -5,7 +5,7 @@ let nextCard = { suit: '', value: 0 };
 let streak = 0; 
 let coins = 100; 
 let passCount = 1;
-let hasShield = false;
+let shieldCount = 0; // 🛡️ シールドの所持数（0〜3個）
 
 // 🎰 ダブルアップ用の変数
 let isDoubleUpMode = false;
@@ -127,6 +127,15 @@ const countItemShieldEl = document.getElementById('count-item-shield');
 const btnUseItemPassEl = document.getElementById('btn-use-item-pass');
 const btnUseItemShieldEl = document.getElementById('btn-use-item-shield');
 
+// 🎰 復活スロット用の要素
+const slotModal = document.getElementById('slot-modal');
+const slotReel1 = document.getElementById('slot-reel-1');
+const slotReel2 = document.getElementById('slot-reel-2');
+const slotReel3 = document.getElementById('slot-reel-3');
+const btnStartSlot = document.getElementById('btn-start-slot');
+const slotMessage = document.getElementById('slot-message');
+
+
 // --- 🔑 ユーザーデータの保存・読み込みロジック (LocalStorage) ---
 
 function getUserList() {
@@ -160,7 +169,7 @@ function saveUserData() {
         maxCoins: maxCoins,
         maxStreak: maxStreak,
         passCount: passCount,
-        hasShield: hasShield,
+        shieldCount: shieldCount,
         dailyMissions: dailyMissions,
         missionProgress: missionProgress,
         lastMissionDate: lastMissionDate,
@@ -195,7 +204,7 @@ function loadUserData(username) {
         maxCoins = data.maxCoins ?? 100;
         maxStreak = data.maxStreak ?? 0;
         passCount = data.passCount ?? 1;
-        hasShield = data.hasShield ?? false;
+        shieldCount = data.shieldCount ?? 0; // 修正：数値でロード
         
         lastMissionDate = data.lastMissionDate ?? "";
         isCompleteRewardClaimed = data.isCompleteRewardClaimed ?? false;
@@ -220,7 +229,7 @@ function loadUserData(username) {
         maxCoins = 100;
         maxStreak = 0;
         passCount = 1;
-        hasShield = false;
+        shieldCount = 0; 
         
         unlockedTitles = ["[初心者]"];
         unlockedSkins = ["default"];
@@ -311,7 +320,7 @@ function updateMissionUI() {
 
         if (!prog.cleared) {
             if (m.id === "m_streak") spanStatus.textContent = `進行中 (${Math.min(streak, m.target)}/${m.target})`;
-            if (m.id === "m_shield" && hasShield) {
+            if (m.id === "m_shield" && shieldCount > 0) { 
                 spanStatus.textContent = "🛡️ 準備OK! (正解で達成)";
                 spanStatus.style.color = "#ff416c";
             }
@@ -455,9 +464,8 @@ function updateCollectionUI() {
     countItemPassEl.textContent = itemPassCount;
     countItemShieldEl.textContent = itemShieldCount;
 
-    const isPlaying = (streak > 0 || isDoubleUpMode);
-    btnUseItemPassEl.disabled = isPlaying || itemPassCount <= 0;
-    btnUseItemShieldEl.disabled = isPlaying || itemShieldCount <= 0 || hasShield;
+    btnUseItemPassEl.disabled = itemPassCount <= 0;
+    btnUseItemShieldEl.disabled = itemShieldCount <= 0 || shieldCount >= 3;
 }
 
 function applySkin(skinId) {
@@ -487,12 +495,117 @@ function useItemPass() {
     saveUserData();
 }
 
-function useItemShield() {
-    if (itemShieldCount <= 0 || hasShield) return;
-    itemShieldCount--;
-    hasShield = true;
+// 🍀 クローバー（未来予知）能力のチェック関数
+function checkCloverAbility() {
+    if (currentCard.suit === 'clover') {
+        let prediction = "";
+        if (nextCard.value > currentCard.value) {
+            prediction = "🔮 予知：次は【HIGH】の確率が高い予感がする...";
+        } else if (nextCard.value < currentCard.value) {
+            prediction = "🔮 予知：次は【LOW】の確率が高い予感がする...";
+        } else {
+            prediction = "🔮 予知：次はまさかの【JUST】かも...";
+        }
+        messageEl.textContent = `🍀 クローバー効果発動！ ${prediction}`;
+        messageEl.style.color = "#00ffcc";
+    } else {
+        messageEl.textContent = '次のカードは、高い？同じ？低い？';
+        messageEl.style.color = '#ffffff';
+    }
+}
+
+// 🪙 破産判定とアルバイト（スロット）
+function checkBankruptcy() {
+    if (coins <= 0) {
+        setTimeout(() => {
+            alert("😭 所持コインが0枚になりました！\n復活のためにスロットアルバイトに挑戦しましょう！");
+            openSlotModal();
+        }, 1200);
+    }
+}
+
+function openSlotModal() {
+    slotModal.style.display = 'flex';
+    slotReel1.textContent = "❓";
+    slotReel2.textContent = "❓";
+    slotReel3.textContent = "❓";
+    slotMessage.textContent = "レバーを引いてコインを稼ごう！";
+    btnStartSlot.disabled = false;
+}
+
+function startSlotJob() {
+    btnStartSlot.disabled = true;
+    slotMessage.textContent = "スロット回転中...🎰";
+    
+    const symbols = ["🪙", "💎", "🛡️", "🌀", "🌟"];
+    let count = 0;
+    
+    const interval = setInterval(() => {
+        slotReel1.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        slotReel2.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        slotReel3.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        count++;
+        if(count > 15) {
+            clearInterval(interval);
+            determineSlotResult();
+        }
+    }, 100);
+}
+
+function determineSlotResult() {
+    const r1 = slotReel1.textContent;
+    const r2 = slotReel2.textContent;
+    const r3 = slotReel3.textContent;
+    
+    let earnCoins = 50; // 最低保証
+    let hitMessage = "お疲れ様でした！バイト代として 🪙50 コイン支給されます！";
+
+    if (r1 === r2 && r2 === r3) {
+        if (r1 === "🪙") { earnCoins = 150; hitMessage = "🎉 スリーコイン達成！🪙150 コイン支給！"; }
+        else if (r1 === "💎") { earnCoins = 300; hitMessage = "💎 大当たり！ダイヤモンドスリー！🪙300 コイン支給！"; }
+        else if (r1 === "🛡️") { earnCoins = 100; shieldCount = Math.min(3, shieldCount + 1); hitMessage = "🛡️ シールドスリー！🪙100 コイン ＋ シールド獲得！"; }
+        else if (r1 === "🌀") { earnCoins = 100; itemPassCount++; hitMessage = "🌀 パススリー！🪙100 コイン ＋ パスアイテム1個獲得！"; }
+        else if (r1 === "🌟") { earnCoins = 500; hitMessage = "🌟 超絶大当り！スタースリー！🪙500 コイン支給！"; }
+    } else if (r1 === r2 || r2 === r3 || r1 === r3) {
+        earnCoins = 100;
+        hitMessage = "👍 お見事！ペア成立で 🪙100 コイン支給されます！";
+    }
+
+    // 🛡️ 単体ペアなどのケースを想定したフォールバック用の修正
+    if (r1 === "🛡️" && r1 !== r2 && r1 !== r3) {
+        earnCoins = 100; 
+        shieldCount = Math.min(3, shieldCount + 1); 
+        hitMessage = "🛡️ シールド獲得！🪙100 コイン ＋ シールド1個獲得！";
+    }
+
+    coins = earnCoins;
+    if (coins > maxCoins) maxCoins = coins;
+    
+    slotMessage.textContent = hitMessage;
+    coinsEl.textContent = coins;
+    maxCoinsEl.textContent = maxCoins;
     updateShieldUI();
-    alert("🛡️ お助けアイテムを使用しました！シールドを装備した状態でスタートします。");
+    updateCollectionUI();
+    saveUserData();
+
+    setTimeout(() => {
+        alert(`${earnCoins} コインを持って復活しました！ゲームに戻ります。`);
+        slotModal.style.display = 'none';
+        initGame();
+    }, 3000);
+}
+
+
+function useItemShield() {
+    if (itemShieldCount <= 0) return;
+    if (shieldCount >= 3) {
+        alert("🛡️ シールドは最大3個までしか貯められません！");
+        return;
+    }
+    itemShieldCount--;
+    shieldCount++; // 1個増やす
+    updateShieldUI();
+    alert(`🛡️ お助けアイテムを使用しました！シールドを1個装備しました（現在: ${shieldCount}個）。`);
     updateCollectionUI();
     saveUserData();
 }
@@ -548,8 +661,12 @@ function updateHighScore() {
 }
 
 function updateShieldUI() {
-    if (hasShield) {
-        shieldStatusEl.textContent = "🛡️ あり (1回保護)";
+    if (shieldCount > 0) {
+        let shieldsHtml = "";
+        for (let i = 0; i < shieldCount; i++) {
+            shieldsHtml += "🛡️";
+        }
+        shieldStatusEl.innerHTML = `${shieldsHtml} (${shieldCount}回保護 / 最大3)`;
         shieldStatusEl.style.color = "#ff416c";
     } else {
         shieldStatusEl.textContent = "🛡️ なし";
@@ -570,7 +687,7 @@ function initGame(isFirstLogin = false) {
         streak = 0;
         streakEl.textContent = streak;
         passCount = 1; 
-        hasShield = false; 
+        shieldCount = 0; 
     }
     
     coinsEl.textContent = coins;
@@ -590,8 +707,7 @@ function initGame(isFirstLogin = false) {
     currentCardImg.src = getCardImagePath(currentCard);
     nextCardInner.classList.remove('is-flipped');
     
-    messageEl.textContent = '次のカードは、高い？同じ？低い？';
-    messageEl.style.color = '#ffffff';
+    checkCloverAbility();
 
     btnHigh.disabled = false;
     btnJust.disabled = false;
@@ -616,16 +732,17 @@ function usePass() {
     currentCard = getRandomCard();
     currentCardImg.src = getCardImagePath(currentCard);
 
-    messageEl.textContent = 'カードを引き直しました！さあ、どっち？';
-    messageEl.style.color = '#4cc9f0';
-
     progressMission("m_pass", 1);
+    
+    checkCloverAbility();
+    
     saveUserData(); 
 }
 
 function checkChoice(playerChoice) {
     let betAmount = 0;
-    const hadShieldBefore = hasShield;
+    // 修正：hasShield を shieldCount > 0 に変更してエラー回避
+    const hadShieldBefore = shieldCount > 0;
 
     if (isDoubleUpMode) {
         betAmount = pooledCoins;
@@ -689,17 +806,19 @@ function checkChoice(playerChoice) {
         }
 
         let shieldEarned = false;
-        if (nextCard.suit === 'heart' && !hasShield) {
-            hasShield = true;
-            shieldEarned = true;
-            progressMission("m_heart_get", 1);
+        if (nextCard.suit === 'heart') {
+            if (shieldCount < 3) {
+                shieldCount++;
+                shieldEarned = true;
+                progressMission("m_heart_get", 1);
+            }
         }
 
         let successMsg = `正解！ ＋${winCoins}コインのチャンス！`;
         if (isJustBonus) successMsg = `凄すぎる！JUST的中！ ＋${winCoins}コインのチャンス！`;
         if (isSpadePenaltyActive) successMsg += ` (♠効果で配当1.5倍！)`;
         if (diaBonus > 0) successMsg += ` [♦ボーナス +${diaBonus}コイン！]`;
-        if (shieldEarned) successMsg += ` 🛡️ハートのシールドを獲得！`;
+        if (shieldEarned) successMsg += ` 🛡️ハートの力でシールドが貯まった！(現在:${shieldCount}個)`;
 
         messageEl.textContent = successMsg;
         messageEl.style.color = '#00ffcc';
@@ -724,8 +843,7 @@ function checkChoice(playerChoice) {
             nextCardInner.classList.remove('is-flipped');
             updateShieldUI();
             
-            messageEl.textContent = 'ダブルアップに挑戦しますか？それともコインを確定（コレクト）しますか？';
-            messageEl.style.color = '#ffd700';
+            checkCloverAbility();
 
             poolCoinsEl.textContent = pooledCoins;
             doubleUpGroup.style.display = 'block';
@@ -733,14 +851,15 @@ function checkChoice(playerChoice) {
         }, 2500);
 
     } else {
-        if (hasShield) {
-            hasShield = false; 
+        if (shieldCount > 0) {
+            shieldCount--;
+            
             if (!isDoubleUpMode) {
                 coins += betAmount; 
                 coinsEl.textContent = coins;
             }
 
-            let shieldSaveMsg = `不正解！ですが、🛡️シールドが身代わりになってくれました！`;
+            let shieldSaveMsg = `不正解！ですが、🛡️シールドが1個身代わりになってくれました！(残り:${shieldCount}個)`;
             if (diaBonus > 0) shieldSaveMsg += ` [♦ボーナス +${diaBonus}コイン！]`;
             
             messageEl.textContent = shieldSaveMsg;
@@ -760,8 +879,7 @@ function checkChoice(playerChoice) {
                 nextCardInner.classList.remove('is-flipped');
                 updateShieldUI();
 
-                messageEl.textContent = '次のカードは、高い？同じ？低い？';
-                messageEl.style.color = '#ffffff';
+                checkCloverAbility();
 
                 btnHigh.disabled = false;
                 btnJust.disabled = false;
@@ -795,13 +913,14 @@ function checkChoice(playerChoice) {
 
             if (coins <= 0) {
                 messageEl.textContent = `無一文になりました…ゲームオーバーです！`;
-                btnReset.textContent = "破産から復活する（コイン100枚）";
+                btnReset.style.display = 'none'; 
+                checkBankruptcy();
             } else {
                 btnReset.textContent = "次のカードへ（リセット）";
+                btnReset.style.display = 'block';
             }
             
             messageEl.style.color = '#ff4b2b';
-            btnReset.style.display = 'block';
             saveUserData();
         }
     }
@@ -833,8 +952,8 @@ function collectCoins() {
 
 function continueDoubleUp() {
     doubleUpGroup.style.display = 'none';
-    messageEl.textContent = `ダブルアップ継続！次のカードは、高い？同じ？低い？`;
-    messageEl.style.color = '#ffffff';
+    
+    checkCloverAbility();
 
     btnHigh.disabled = false;
     btnJust.disabled = false;
@@ -842,7 +961,6 @@ function continueDoubleUp() {
     if (passCount > 0) btnPass.disabled = false;
 }
 
-// 🔑 称号・スキンの切り替えイベントハンドラ
 selectTitleEl.addEventListener('change', (e) => {
     activeTitle = e.target.value;
     titleDisplayEl.textContent = activeTitle;
@@ -855,7 +973,6 @@ selectSkinEl.addEventListener('change', (e) => {
     saveUserData();
 });
 
-// --- イベントリスナー ---
 btnHigh.addEventListener('click', () => checkChoice('high'));
 btnJust.addEventListener('click', () => checkChoice('just'));
 btnLow.addEventListener('click', () => checkChoice('low'));
@@ -873,6 +990,8 @@ usernameInput.addEventListener('keypress', (e) => {
 
 btnGachaEl.addEventListener('click', drawGacha);
 btnUseItemPassEl.addEventListener('click', useItemPass);
-btnUseItemShieldEl.addEventListener('click', useItemShield);
+btnUseItemShieldEl.addEventListener('click', useItemShield); // 修正：スペルミス（useItemShieeld -> useItemShield）
+
+btnStartSlot.addEventListener('click', startSlotJob);
 
 updateUserSelectDropdown();
